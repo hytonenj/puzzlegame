@@ -141,6 +141,9 @@ class Game:
                         self.player.undo_movement()
                         self.key.undo_movement()
                         self.total_undos += 1
+                    else:
+                        self.player.shake(self.screen.screen)
+                        self.key.shake(self.screen.screen)
                 elif event.key == pygame.K_r:
                     self.reset_game()
 
