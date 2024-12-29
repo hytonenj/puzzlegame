@@ -1,5 +1,4 @@
 import pygame
-from color import Color
 
 class Door:
     def __init__(self, x, y, width, height, image_path="assets/door_closed.png"):

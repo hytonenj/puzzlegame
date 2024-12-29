@@ -1,12 +1,11 @@
 import pygame
 import time
-from color import Color
-from key import Key
-from door import Door
-from player import Player
-from screen import Screen
-from level import Level
-from block import Block
+from game.key import Key
+from game.door import Door
+from game.player import Player
+from game.screen import Screen
+from game.level import Level
+from game.block import Block
 
 class Game:
     def __init__(self):
@@ -97,6 +96,7 @@ class Game:
     def start_game(self):
         self.state = "in_progress"
         self.current_level_index = 0
+        self.load_level(self.current_level_index)
         self.start_time = time.time()
 
     def end_game(self):
@@ -128,15 +128,19 @@ class Game:
                     self.player.move(self.screen.block_size, 0, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
                     self.total_moves += 1
                 elif event.key == pygame.K_z:
-                    if self.player.movements and self.key.movements:
+                    new_player_pos = (self.player.rect.x, self.player.rect.y)
+                    new_key_pos = (self.key.rect.x, self.key.rect.y)
+                    old_key_pos = new_key_pos
+                    if self.player.movements:
                         last_player_move = self.player.movements[-1]
-                        last_key_move = self.key.movements[-1]
                         new_player_pos = (self.player.rect.x - last_player_move[0], self.player.rect.y - last_player_move[1])
+                    if self.key.movements:
+                        last_key_move = self.key.movements[-1]
                         new_key_pos = (self.key.rect.x - last_key_move[0], self.key.rect.y - last_key_move[1])
-                        if new_player_pos != new_key_pos:
-                            self.player.undo_movement()
-                            self.key.undo_movement()
-                            self.total_undos += 1
+                    if new_player_pos != new_key_pos and new_player_pos != old_key_pos:
+                        self.player.undo_movement()
+                        self.key.undo_movement()
+                        self.total_undos += 1
                 elif event.key == pygame.K_r:
                     self.reset_game()
 

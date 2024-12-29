@@ -1,4 +1,4 @@
-from color import Color
+from game.color import Color
 import pygame
 
 class Screen:

@@ -1,5 +1,4 @@
 import pygame
-from color import Color
 
 class Key:
     def __init__(self, x, y, width, height, image_path="assets/key.png"):
