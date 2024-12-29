@@ -137,7 +137,7 @@ class Game:
                     if self.key.movements:
                         last_key_move = self.key.movements[-1]
                         new_key_pos = (self.key.rect.x - last_key_move[0], self.key.rect.y - last_key_move[1])
-                    if new_player_pos != new_key_pos and new_player_pos != old_key_pos:
+                    if new_player_pos != new_key_pos:
                         self.player.undo_movement()
                         self.key.undo_movement()
                         self.total_undos += 1
