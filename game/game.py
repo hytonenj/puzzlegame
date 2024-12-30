@@ -34,6 +34,9 @@ class Game:
         self.player.rect.topleft = self.initial_player_pos
         self.key.rect.topleft = self.initial_key_pos
         self.door.open = False
+        self.total_moves = 0
+        self.total_undos = 0
+        self.total_resets = 0
         self.door.change_image()
         self.total_resets += 1
         self.state = "in_progress"
