@@ -16,12 +16,9 @@ class Game:
         self.total_undos = 0
         self.total_resets = 0
         self.start_time = None
-        self.levels = self.create_levels()
+        self.levels = create_levels()
         self.load_level(self.current_level_index)
 
-    def create_levels(self):
-        return create_levels(self.screen.block_size)
-    
     def load_level(self, level_index):
         level = self.levels[level_index]
         self.player = Player(level.player_start[0], level.player_start[1], self.screen.block_size, self.screen.block_size)
@@ -114,13 +111,14 @@ class Game:
             if event.type == pygame.QUIT:
                 self.end_game()
                 return False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if start_rect.collidepoint(event.pos):
                     self.start_game()
                     return True
                 elif edit_rect.collidepoint(event.pos):
                     editor = LevelEditor(self.screen)
                     editor.run()
+                    self.levels = create_levels()
                 elif quit_rect.collidepoint(event.pos):
                     self.end_game()
                     return False

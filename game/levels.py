@@ -1,9 +1,9 @@
-# filepath: /home/hytonenj/puzzlegame/game/levels.py
+import os
 import json
 from game.block import Block
 from game.level import Level
 
-def load_levels_from_json(file_path, block_size):
+def load_levels_from_json(file_path):
     with open(file_path, 'r') as f:
         levels_data = json.load(f)
 
@@ -17,5 +17,5 @@ def load_levels_from_json(file_path, block_size):
 
     return levels
 
-def create_levels(block_size):
-    return load_levels_from_json('/home/hytonenj/puzzlegame/data/levels.json', block_size)
+def create_levels():
+    return load_levels_from_json(os.path.join(os.path.dirname(__file__), '../data/levels.json'))

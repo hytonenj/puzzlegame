@@ -63,11 +63,11 @@ class Screen:
     def display_menu(self):
         menu_font = pygame.font.SysFont("monospace", 50)
         start_text = menu_font.render("Start", True, Color.WHITE)
-        edit_text = menu_font.render("Level Editor", True, Color.WHITE)
+        edit_text = menu_font.render("Editor", True, Color.WHITE)
         quit_text = menu_font.render("Quit", True, Color.WHITE)
 
         start_rect = start_text.get_rect(center=(self.width // 2, self.height // 2 - 100))
-        edit_rect = start_text.get_rect(center=(self.width // 2, self.height // 2))
+        edit_rect = edit_text.get_rect(center=(self.width // 2, self.height // 2))
         quit_rect = quit_text.get_rect(center=(self.width // 2, self.height // 2 + 100))
 
         self.screen.fill(Color.BLACK)
