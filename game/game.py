@@ -27,12 +27,15 @@ class Game:
         self.blocks = level.blocks
         self.initial_player_pos = level.player_start
         self.initial_key_pos = level.key_start
+        self.initial_door_pos = level.door_start
 
     def reset_game(self):
         self.player.movements = []
         self.key.movements = []
+        self.door.movements = []
         self.player.rect.topleft = self.initial_player_pos
         self.key.rect.topleft = self.initial_key_pos
+        self.door.rect.topleft = self.initial_door_pos
         self.door.open = False
         self.total_moves = 0
         self.total_undos = 0
