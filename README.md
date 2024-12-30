@@ -22,7 +22,7 @@ Welcome to the Puzzle Game! This is a fun and challenging game where you need to
 
 2. Clone the repository:
     ```sh
-    git clone https://github.com/yourusername/puzzlegame.git
+    git clone https://github.com/hytonenj/puzzlegame.git
     cd puzzlegame
     ```
 
