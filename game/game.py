@@ -4,75 +4,23 @@ from game.key import Key
 from game.door import Door
 from game.player import Player
 from game.screen import Screen
-from game.level import Level
-from game.block import Block
+from game.levels import create_levels
+from game.leveleditor import LevelEditor
 
 class Game:
     def __init__(self):
         self.state = "not_started"
         self.screen = Screen()
-        self.levels = self.create_levels()
         self.current_level_index = 0
         self.total_moves = 0
         self.total_undos = 0
         self.total_resets = 0
         self.start_time = None
+        self.levels = self.create_levels()
         self.load_level(self.current_level_index)
 
     def create_levels(self):
-        bs = self.screen.block_size
-        levels = [
-            Level(
-                (bs, 4 * bs), # Player
-                (5 * bs, 4 * bs), # Key
-                (9 * bs, 5 * bs), # Door
-                [Block(1 * bs, 5 * bs, bs, bs),
-                 Block(4 * bs, 1 * bs, bs, bs),
-                 Block(4 * bs, 2 * bs, bs, bs),
-                 Block(4 * bs, 3 * bs, bs, bs),
-                 Block(4 * bs, 4 * bs, bs, bs),
-                 Block(6 * bs, 1 * bs, bs, bs),
-                 Block(6 * bs, 2 * bs, bs, bs),
-                 Block(7 * bs, 2 * bs, bs, bs),
-                 Block(8 * bs, 2 * bs, bs, bs),
-                 Block(1 * bs, 6 * bs, bs, bs),
-                 Block(2 * bs, 6 * bs, bs, bs),
-                 Block(3 * bs, 6 * bs, bs, bs),
-                 Block(4 * bs, 6 * bs, bs, bs),
-                 Block(5 * bs, 7 * bs, bs, bs),
-                 ]
-            ),
-            Level(
-                (bs, 4 * bs), # Player
-                (5 * bs, 4 * bs), # Key
-                (9 * bs, 7 * bs), # Door
-                [Block(5 * bs, 5 * bs, bs, bs),
-                 Block(1 * bs, 6 * bs, bs, bs),
-                 Block(2 * bs, 6 * bs, bs, bs),
-                 Block(4 * bs, 6 * bs, bs, bs),
-                 Block(5 * bs, 6 * bs, bs, bs),
-                 Block(6 * bs, 6 * bs, bs, bs),
-                 Block(7 * bs, 6 * bs, bs, bs),
-                 Block(7 * bs, 5 * bs, bs, bs),
-                 Block(7 * bs, 4 * bs, bs, bs),
-                 Block(7 * bs, 3 * bs, bs, bs),
-                 Block(7 * bs, 2 * bs, bs, bs),
-                 Block(6 * bs, 2 * bs, bs, bs),
-                 Block(5 * bs, 2 * bs, bs, bs),
-                 Block(4 * bs, 2 * bs, bs, bs),
-                 Block(3 * bs, 2 * bs, bs, bs),
-                 Block(2 * bs, 2 * bs, bs, bs),
-                 Block(1 * bs, 2 * bs, bs, bs),
-                 Block(4 * bs, 3 * bs, bs, bs),
-                 Block(2 * bs, 3 * bs, bs, bs),
-                 Block(3 * bs, 1 * bs, bs, bs),
-                 Block(1 * bs, 5 * bs, bs, bs),
-                 Block(2 * bs, 5 * bs, bs, bs),
-
-                 ]
-            ),
-        ]
-        return levels
+        return create_levels(self.screen.block_size)
     
     def load_level(self, level_index):
         level = self.levels[level_index]
@@ -161,7 +109,7 @@ class Game:
                     self.win_game()
 
 
-    def handle_menu_events(self, start_rect, quit_rect):
+    def handle_menu_events(self, start_rect, edit_rect, quit_rect):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.end_game()
@@ -170,6 +118,9 @@ class Game:
                 if start_rect.collidepoint(event.pos):
                     self.start_game()
                     return True
+                elif edit_rect.collidepoint(event.pos):
+                    editor = LevelEditor(self.screen)
+                    editor.run()
                 elif quit_rect.collidepoint(event.pos):
                     self.end_game()
                     return False
@@ -188,8 +139,8 @@ class Game:
     def run(self):
         while True:
             while self.get_state() == "not_started":
-                start_rect, quit_rect = self.screen.display_menu()
-                if not self.handle_menu_events(start_rect, quit_rect):
+                start_rect, edit_rect, quit_rect = self.screen.display_menu()
+                if not self.handle_menu_events(start_rect, edit_rect, quit_rect):
                     pygame.quit()
                     return
                 
