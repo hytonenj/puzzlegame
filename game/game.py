@@ -78,20 +78,38 @@ class Game:
                 elif event.key == pygame.K_z:
                     new_player_pos = (self.player.rect.x, self.player.rect.y)
                     new_key_pos = (self.key.rect.x, self.key.rect.y)
+                    new_door_pos = (self.door.rect.x, self.door.rect.y)
                     old_key_pos = new_key_pos
+                    old_door_pos = new_door_pos
                     if self.player.movements:
                         last_player_move = self.player.movements[-1]
                         new_player_pos = (self.player.rect.x - last_player_move[0], self.player.rect.y - last_player_move[1])
                     if self.key.movements:
                         last_key_move = self.key.movements[-1]
                         new_key_pos = (self.key.rect.x - last_key_move[0], self.key.rect.y - last_key_move[1])
-                    if new_player_pos != new_key_pos:
+                    if self.door.movements:
+                        last_door_move = self.door.movements[-1]
+                        new_door_pos = (self.door.rect.x - last_door_move[0], self.door.rect.y - last_door_move[1])
+                    if new_player_pos != new_key_pos and new_player_pos != new_door_pos:
                         self.player.undo_movement()
                         self.key.undo_movement()
+                        self.door.undo_movement()
                         self.total_undos += 1
                     else:
-                        self.player.shake(self.screen.screen)
-                        self.key.shake(self.screen.screen)
+                        # Only shake objects that are about to collide
+                        if new_player_pos == new_key_pos:
+                            self.player.shake(self.screen.screen)
+                            self.key.shake(self.screen.screen)
+                        if new_player_pos == new_door_pos:
+                            self.player.shake(self.screen.screen)
+                            self.door.shake(self.screen.screen)
+                        if new_key_pos == new_door_pos:
+                            self.key.shake(self.screen.screen)
+                            self.door.shake(self.screen.screen)
+                        if new_player_pos == new_key_pos == new_door_pos:
+                            self.player.shake(self.screen.screen)
+                            self.key.shake(self.screen.screen)
+                            self.door.shake(self.screen.screen)
                 elif event.key == pygame.K_r:
                     self.reset_game()
 

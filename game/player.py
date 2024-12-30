@@ -36,6 +36,21 @@ class Player:
                         key.move(dx, dy)
                     else:
                         return  # Prevent player from moving if the key can't move
+                    
+            if door and not door.open:
+                door_new_x = door.rect.x + dx
+                door_new_y = door.rect.y + dy
+
+                # Check if the player is adjacent to the door and moving towards it
+                if self.rect.colliderect(door.rect.move(-dx, -dy)):
+                    # Check boundaries for the door
+                    if block_size <= door_new_x < (grid_size) * block_size and block_size <= door_new_y < (grid_size) * block_size:
+                        # Check for collisions with blocks for the door
+                        if any(block.rect.collidepoint(door_new_x, door_new_y) for block in blocks):
+                            return  # Prevent door from moving if there's a collision with a block
+                        door.move(dx, dy)
+                    else:
+                        return  # Prevent player from moving if the door can't move
 
             self.rect.x = new_x
             self.rect.y = new_y
