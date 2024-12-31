@@ -7,3 +7,5 @@ class Color:
 	BROWN = (165,42,42)
 	GREEN = (0,255,0)
 	GRAY = (128,128,128)
+	DARK_GRAY = (169,169,169)
+	LIGHT_GRAY = (211,211,211)

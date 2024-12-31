@@ -1,8 +1,13 @@
-from game.color import Color
 import pygame
+import logging
+from game.color import Color
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Screen:
     def __init__(self, width=800, height=800, background_color=Color.BLACK, font_type="monospace", font_size=15):
+        logging.info("Initializing screen")
         self.width = width
         self.height = height
         self.background_color = background_color
@@ -10,6 +15,7 @@ class Screen:
         self.font = pygame.font.SysFont(font_type, font_size)
         self.grid_size = 9
         self.block_size = min(width, height) // (self.grid_size + 1)
+        pygame.display.set_caption("Puzzle Game")
 
     def refresh_background(self):
         self.screen.fill(self.background_color)
@@ -61,6 +67,7 @@ class Screen:
 
 
     def display_menu(self):
+        logging.info("Displaying menu")
         menu_font = pygame.font.SysFont("monospace", 50)
         start_text = menu_font.render("Start", True, Color.WHITE)
         edit_text = menu_font.render("Editor", True, Color.WHITE)
@@ -76,9 +83,11 @@ class Screen:
         self.screen.blit(quit_text, quit_rect)
         pygame.display.update()
 
+        logging.debug("Menu displayed with Start, Edit, and Quit options")
         return start_rect, edit_rect, quit_rect
     
     def display_winning_screen(self, total_moves, total_undos, total_resets, elapsed_time):
+        logging.info("Displaying winning screen")
         winning_font = pygame.font.SysFont("monospace", 50)
         moves_text = winning_font.render(f"Total Moves: {total_moves}", True, Color.WHITE)
         undos_text = winning_font.render(f"Total Undos: {total_undos}", True, Color.WHITE)
@@ -102,5 +111,5 @@ class Screen:
         self.screen.blit(resets_text, resets_rect)
         self.screen.blit(return_text, return_rect)
         pygame.display.update()
-
+        logging.debug("Winning screen displayed with total moves, undos, resets, and elapsed time")
         return return_rect
