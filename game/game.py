@@ -23,11 +23,11 @@ class Game:
         self.total_undos = 0
         self.total_resets = 0
         self.start_time = None
-        self.levels = create_levels()
         self.load_level(self.current_level_index)
 
     def load_level(self, level_index):
         logging.info(f"Loading level {level_index + 1}")
+        self.levels = create_levels()
         level = self.levels[level_index]
         self.player = Player(level.player_start[0], level.player_start[1], self.screen.block_size, self.screen.block_size)
         self.key = Key(level.key_start[0], level.key_start[1], self.screen.block_size, self.screen.block_size)
@@ -36,7 +36,7 @@ class Game:
         self.initial_player_pos = level.player_start
         self.initial_key_pos = level.key_start
         self.initial_door_pos = level.door_start
-        self.initial_block_positions = {block: (block.rect.x, block.rect.y) for block in self.blocks}
+        self.initial_block_positions = {block: (block.rect.x, block.rect.y) for block in level.blocks}
 
     def reset_game(self):
         logging.info("Resetting game")
@@ -195,7 +195,6 @@ class Game:
                 else:
                     logging.info("No more levels to load")
                     self.win_game()
-
 
     def handle_menu_events(self, start_rect, edit_rect, quit_rect):
         for event in pygame.event.get():
