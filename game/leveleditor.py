@@ -103,7 +103,7 @@ class LevelEditor:
 
     def draw_instructions(self):
         instructions = [
-            "LMB: Place Block",
+            "LMB: Place Block/Change Movability",
             "RMB: Remove Object",
             "1: Place Player",
             "2: Place Key",
