@@ -38,8 +38,8 @@ class Game:
         self.initial_door_pos = level.door_start
         self.initial_block_positions = {block: (block.rect.x, block.rect.y) for block in level.blocks}
 
-    def reset_game(self):
-        logging.info("Resetting game")
+    def reset_level(self):
+        logging.info("Resetting level")
         self.player.movements = []
         self.key.movements = []
         self.door.movements = []
@@ -49,13 +49,17 @@ class Game:
         for block in self.blocks:
             block.rect.topleft = self.initial_block_positions[block]
             block.movements = []
-        self.total_moves = 0
-        self.total_undos = 0
-        self.total_resets = 0
         self.door.open = False
         self.door.change_image()
         self.total_resets += 1
         self.state = "in_progress"
+
+    def reset_game(self):
+        logging.info("Resetting game")
+        self.reset_level()
+        self.total_moves = 0
+        self.total_undos = 0
+        self.total_resets = 0
 
     def start_game(self):
         logging.info("Starting game")
@@ -174,7 +178,7 @@ class Game:
                     logging.info("Undoing last move")
                     self.undo_last_action()
                 elif event.key == pygame.K_r:
-                    self.reset_game()
+                    self.reset_level()
                 elif event.key == pygame.K_ESCAPE:
                     self.reset_game()
                     self.state = "not_started"
