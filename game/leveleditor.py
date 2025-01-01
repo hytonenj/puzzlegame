@@ -77,6 +77,20 @@ class LevelEditor:
 
     def save_level(self):
         logging.info("Saving current level")
+        # Validation checks
+        if not self.player_start:
+            logging.error("Cannot save level: Player is missing")
+            return
+        if not self.key_start:
+            logging.error("Cannot save level: Key is missing")
+            return
+        if not self.door_start:
+            logging.error("Cannot save level: Door is missing")
+            return
+        if not self.blocks:
+            logging.error("Cannot save level: At least one block is required")
+            return
+        
         level_data = {
             "player_start": [self.player_start.rect.x, self.player_start.rect.y],
             "key_start": [self.key_start.rect.x, self.key_start.rect.y],
