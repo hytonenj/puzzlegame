@@ -118,15 +118,15 @@ class LevelEditor:
     def draw_dropdown_menu(self):
         font = pygame.font.SysFont("monospace", 18)
         if self.dropdown_open:
-            pygame.draw.rect(self.screen.screen, Color.GRAY, self.dropdown_rect)
+            pygame.draw.rect(self.screen.screen, Color.DARK_GRAY, self.dropdown_rect)
             dropdown_text = font.render("Select Level", True, Color.WHITE)
             self.screen.screen.blit(dropdown_text, self.dropdown_rect.topleft)
             for i, rect in enumerate(self.dropdown_items):
-                pygame.draw.rect(self.screen.screen, Color.GRAY, rect)
+                pygame.draw.rect(self.screen.screen, Color.DARK_GRAY, rect)
                 item_text = font.render(f"Level {i + 1}", True, Color.WHITE)
                 self.screen.screen.blit(item_text, rect.topleft)
         else:
-            pygame.draw.rect(self.screen.screen, Color.GRAY, self.dropdown_rect)
+            pygame.draw.rect(self.screen.screen, Color.DARK_GRAY, self.dropdown_rect)
             dropdown_text = font.render("Select Level", True, Color.WHITE)
             self.screen.screen.blit(dropdown_text, self.dropdown_rect.topleft)
 
@@ -232,6 +232,9 @@ class LevelEditor:
                     elif event.key == pygame.K_z:  # Press 'z' to undo the last action
                         self.undo_last_action()
                         redraw_needed = True
+                    elif event.key == pygame.K_ESCAPE:
+                        logging.info("Return button clicked")
+                        running = False
 
             if redraw_needed:
                 self.draw_elements()

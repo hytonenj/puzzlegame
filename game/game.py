@@ -175,6 +175,9 @@ class Game:
                     self.undo_last_action()
                 elif event.key == pygame.K_r:
                     self.reset_game()
+                elif event.key == pygame.K_ESCAPE:
+                    self.reset_game()
+                    self.state = "not_started"
 
             if self.key.rect.colliderect(self.door.rect):
                 logging.info("Key and door collided")

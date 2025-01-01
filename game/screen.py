@@ -26,7 +26,7 @@ class Screen:
             for y in range(self.grid_size + 1):
                 if x == 0 or x == self.grid_size or y == 0 or y == self.grid_size:
                     rect = pygame.Rect(x * self.block_size, y * self.block_size, self.block_size, self.block_size)
-                    pygame.draw.rect(self.screen, Color.GRAY, rect)
+                    pygame.draw.rect(self.screen, Color.DARK_GRAY, rect)
 
     def draw_player(self, player):
         player.draw(self.screen)
@@ -42,18 +42,21 @@ class Screen:
             block.draw(self.screen)
 
     def draw_level_text(self, level):
-        level_text = self.font.render(f"Level {level}", True, Color.WHITE)
-        self.screen.blit(level_text, (10, 2))
+        level_font = pygame.font.SysFont("monospace", 25)
+        level_text = level_font.render(f"Level {level}", True, Color.GREEN)
+        text_rect = level_text.get_rect(center=(self.width // 2, 35))
+        self.screen.blit(level_text, text_rect)
 
     def draw_instructions(self):
         instructions = [
             "WASD for movement",
             "Z to undo movement",
-            "R to reset the level"
+            "R to reset the level",
+            "ESC to return to menu"
         ]
         for i, instruction in enumerate(instructions):
             instruction_text = self.font.render(instruction, True, Color.WHITE)
-            self.screen.blit(instruction_text, (10, 20 + i * 20))
+            self.screen.blit(instruction_text, (10, 2 + i * 20))
 
     def update_screen(self, player, key, door, blocks, level):
         self.refresh_background()
@@ -64,7 +67,6 @@ class Screen:
         self.draw_level_text(level)
         self.draw_instructions()
         pygame.display.update()
-
 
     def display_menu(self):
         logging.info("Displaying menu")
