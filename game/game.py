@@ -77,6 +77,12 @@ class Game:
     def get_state(self):
         return self.state
     
+    def shake_if_colliding(self, obj1_pos, obj2_pos, obj1, obj2, obj1_name, obj2_name):
+        if obj1_pos == obj2_pos:
+            logging.warning(f"{obj1_name} and {obj2_name} are about to collide")
+            obj1.shake(self.screen.screen)
+            obj2.shake(self.screen.screen)
+    
     def undo_last_action(self):
         logging.info("Undoing last action")
         new_player_pos = (self.player.rect.x, self.player.rect.y)
@@ -122,36 +128,27 @@ class Game:
                 block.undo_movement()
             self.total_undos += 1
         else:
-            # Only shake objects that are about to collide
-            if new_player_pos == new_key_pos:
-                logging.warning("Player and key are about to collide")
-                self.player.shake(self.screen.screen)
-                self.key.shake(self.screen.screen)
-            if new_player_pos == new_door_pos:
-                logging.warning("Player and door are about to collide")
-                self.player.shake(self.screen.screen)
-                self.door.shake(self.screen.screen)
-            if new_key_pos == new_door_pos:
-                logging.warning("Key and door are about to collide")
-                self.key.shake(self.screen.screen)
-                self.door.shake(self.screen.screen)
+            self.shake_if_colliding(new_player_pos, new_key_pos, self.player, self.key, "Player", "Key")
+            self.shake_if_colliding(new_player_pos, new_door_pos, self.player, self.door, "Player", "Door")
+            self.shake_if_colliding(new_key_pos, new_door_pos, self.key, self.door, "Key", "Door")
             if new_player_pos == new_key_pos == new_door_pos:
                 logging.warning("Player, key, and door are about to collide")
                 self.player.shake(self.screen.screen)
                 self.key.shake(self.screen.screen)
                 self.door.shake(self.screen.screen)
             for block, new_block_pos in new_block_positions.items():
-                if new_block_pos == new_player_pos:
-                    logging.warning("Block and player are about to collide")
+                self.shake_if_colliding(new_block_pos, new_player_pos, block, self.player, "Block", "Player")
+                self.shake_if_colliding(new_block_pos, new_key_pos, block, self.key, "Block", "Key")
+                self.shake_if_colliding(new_block_pos, new_door_pos, block, self.door, "Block", "Door")
+                if new_block_pos == new_player_pos == new_key_pos:
+                    logging.warning("Block, player, and key are about to collide")
                     block.shake(self.screen.screen)
                     self.player.shake(self.screen.screen)
-                if new_block_pos == new_key_pos:
-                    logging.warning("Block and key are about to collide")
-                    block.shake(self.screen.screen)
                     self.key.shake(self.screen.screen)
-                if new_block_pos == new_door_pos:
-                    logging.warning("Block and door are about to collide")
+                if new_block_pos == new_player_pos == new_door_pos:
+                    logging.warning("Block, player, and door are about to collide")
                     block.shake(self.screen.screen)
+                    self.player.shake(self.screen.screen)
                     self.door.shake(self.screen.screen)
     
     def handle_events(self):
