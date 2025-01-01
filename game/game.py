@@ -3,6 +3,7 @@ import time
 import logging
 from game.key import Key
 from game.door import Door
+from game.block import Block
 from game.player import Player
 from game.screen import Screen
 from game.levels import create_levels
@@ -35,6 +36,7 @@ class Game:
         self.initial_player_pos = level.player_start
         self.initial_key_pos = level.key_start
         self.initial_door_pos = level.door_start
+        self.initial_block_positions = {block: (block.rect.x, block.rect.y) for block in self.blocks}
 
     def reset_game(self):
         logging.info("Resetting game")
@@ -44,10 +46,13 @@ class Game:
         self.player.rect.topleft = self.initial_player_pos
         self.key.rect.topleft = self.initial_key_pos
         self.door.rect.topleft = self.initial_door_pos
-        self.door.open = False
+        for block in self.blocks:
+            block.rect.topleft = self.initial_block_positions[block]
+            block.movements = []
         self.total_moves = 0
         self.total_undos = 0
         self.total_resets = 0
+        self.door.open = False
         self.door.change_image()
         self.total_resets += 1
         self.state = "in_progress"
@@ -72,6 +77,83 @@ class Game:
     def get_state(self):
         return self.state
     
+    def undo_last_action(self):
+        logging.info("Undoing last action")
+        new_player_pos = (self.player.rect.x, self.player.rect.y)
+        new_key_pos = (self.key.rect.x, self.key.rect.y)
+        new_door_pos = (self.door.rect.x, self.door.rect.y)
+        new_block_positions = {block: (block.rect.x, block.rect.y) for block in self.blocks}
+        if self.player.movements:
+            last_player_move = self.player.movements[-1]
+            new_player_pos = (self.player.rect.x - last_player_move[0], self.player.rect.y - last_player_move[1])
+        if self.key.movements:
+            last_key_move = self.key.movements[-1]
+            new_key_pos = (self.key.rect.x - last_key_move[0], self.key.rect.y - last_key_move[1])
+        if self.door.movements:
+            last_door_move = self.door.movements[-1]
+            new_door_pos = (self.door.rect.x - last_door_move[0], self.door.rect.y - last_door_move[1])
+        for block in self.blocks:
+            if block.movements:
+                last_block_move = block.movements[-1]
+                new_block_positions[block] = (block.rect.x - last_block_move[0], block.rect.y - last_block_move[1])
+        self.total_undos += 1
+
+        player_not_colliding = (
+            new_player_pos != new_key_pos and
+            new_player_pos != new_door_pos and
+            not any(new_player_pos == new_block_pos for new_block_pos in new_block_positions.values())
+        )
+        key_not_colliding = (
+            new_key_pos != new_door_pos and
+            not any(new_key_pos == new_block_pos for new_block_pos in new_block_positions.values())
+        )
+        door_not_colliding = (
+            not any(new_door_pos == new_block_pos for new_block_pos in new_block_positions.values())
+        )
+        blocks_not_colliding = (
+            not any(new_block_pos == other_block_pos for block, new_block_pos in new_block_positions.items() for other_block, other_block_pos in new_block_positions.items() if block != other_block)
+        )
+        logging.info(f"Player not colliding: {player_not_colliding}, Key not colliding: {key_not_colliding}, Door not colliding: {door_not_colliding}, Blocks not colliding: {blocks_not_colliding}")
+        if player_not_colliding and key_not_colliding and door_not_colliding and blocks_not_colliding:
+            self.player.undo_movement()
+            self.key.undo_movement()
+            self.door.undo_movement()
+            for block in self.blocks:
+                block.undo_movement()
+            self.total_undos += 1
+        else:
+            # Only shake objects that are about to collide
+            if new_player_pos == new_key_pos:
+                logging.warning("Player and key are about to collide")
+                self.player.shake(self.screen.screen)
+                self.key.shake(self.screen.screen)
+            if new_player_pos == new_door_pos:
+                logging.warning("Player and door are about to collide")
+                self.player.shake(self.screen.screen)
+                self.door.shake(self.screen.screen)
+            if new_key_pos == new_door_pos:
+                logging.warning("Key and door are about to collide")
+                self.key.shake(self.screen.screen)
+                self.door.shake(self.screen.screen)
+            if new_player_pos == new_key_pos == new_door_pos:
+                logging.warning("Player, key, and door are about to collide")
+                self.player.shake(self.screen.screen)
+                self.key.shake(self.screen.screen)
+                self.door.shake(self.screen.screen)
+            for block, new_block_pos in new_block_positions.items():
+                if new_block_pos == new_player_pos:
+                    logging.warning("Block and player are about to collide")
+                    block.shake(self.screen.screen)
+                    self.player.shake(self.screen.screen)
+                if new_block_pos == new_key_pos:
+                    logging.warning("Block and key are about to collide")
+                    block.shake(self.screen.screen)
+                    self.key.shake(self.screen.screen)
+                if new_block_pos == new_door_pos:
+                    logging.warning("Block and door are about to collide")
+                    block.shake(self.screen.screen)
+                    self.door.shake(self.screen.screen)
+    
     def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -93,42 +175,7 @@ class Game:
                     self.total_moves += 1
                 elif event.key == pygame.K_z:
                     logging.info("Undoing last move")
-                    new_player_pos = (self.player.rect.x, self.player.rect.y)
-                    new_key_pos = (self.key.rect.x, self.key.rect.y)
-                    new_door_pos = (self.door.rect.x, self.door.rect.y)
-                    if self.player.movements:
-                        last_player_move = self.player.movements[-1]
-                        new_player_pos = (self.player.rect.x - last_player_move[0], self.player.rect.y - last_player_move[1])
-                    if self.key.movements:
-                        last_key_move = self.key.movements[-1]
-                        new_key_pos = (self.key.rect.x - last_key_move[0], self.key.rect.y - last_key_move[1])
-                    if self.door.movements:
-                        last_door_move = self.door.movements[-1]
-                        new_door_pos = (self.door.rect.x - last_door_move[0], self.door.rect.y - last_door_move[1])
-                    if new_player_pos != new_key_pos and new_player_pos != new_door_pos:
-                        self.player.undo_movement()
-                        self.key.undo_movement()
-                        self.door.undo_movement()
-                        self.total_undos += 1
-                    else:
-                        # Only shake objects that are about to collide
-                        if new_player_pos == new_key_pos:
-                            logging.warning("Player and key are about to collide")
-                            self.player.shake(self.screen.screen)
-                            self.key.shake(self.screen.screen)
-                        if new_player_pos == new_door_pos:
-                            logging.warning("Player and door are about to collide")
-                            self.player.shake(self.screen.screen)
-                            self.door.shake(self.screen.screen)
-                        if new_key_pos == new_door_pos:
-                            logging.warning("Key and door are about to collide")
-                            self.key.shake(self.screen.screen)
-                            self.door.shake(self.screen.screen)
-                        if new_player_pos == new_key_pos == new_door_pos:
-                            logging.warning("Player, key, and door are about to collide")
-                            self.player.shake(self.screen.screen)
-                            self.key.shake(self.screen.screen)
-                            self.door.shake(self.screen.screen)
+                    self.undo_last_action()
                 elif event.key == pygame.K_r:
                     self.reset_game()
 

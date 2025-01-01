@@ -15,6 +15,7 @@ pygame.init()
 
 class LevelEditor:
     def __init__(self, screen, level_index=None):
+        logging.info("Initializing LevelEditor")
         self.screen = screen
         self.block_size = screen.block_size
 
@@ -56,6 +57,7 @@ class LevelEditor:
 
     def load_level(self, level_index):
         try:
+            logging.info(f"Loading level {level_index + 1}")
             level_data = self.levels[level_index]
             self.player_start = Player(level_data["player_start"][0], level_data["player_start"][1], self.block_size, self.block_size)
             self.key_start = Key(level_data["key_start"][0], level_data["key_start"][1], self.block_size, self.block_size)
@@ -66,12 +68,15 @@ class LevelEditor:
 
     def load_levels(self):
         try:
+            logging.info("Loading levels from file")
             with open(self.levels_path, 'r') as f:
                 self.levels = json.load(f)
         except FileNotFoundError:
+            logging.warning("Levels file not found, initializing with empty levels")
             self.levels = []
 
     def save_level(self):
+        logging.info("Saving current level")
         level_data = {
             "player_start": [self.player_start.rect.x, self.player_start.rect.y],
             "key_start": [self.key_start.rect.x, self.key_start.rect.y],
@@ -86,6 +91,7 @@ class LevelEditor:
 
         with open(self.levels_path, 'w') as f:
             json.dump(self.levels, f, indent=4)
+        logging.info("Level saved successfully")
 
     def draw_grid(self):
         for x in range(0, self.screen.width, self.block_size):
@@ -125,6 +131,7 @@ class LevelEditor:
             self.screen.screen.blit(dropdown_text, self.dropdown_rect.topleft)
 
     def draw_elements(self):
+        logging.debug("Drawing elements on screen")
         self.screen.refresh_background()
         for block in self.blocks:
             block.draw(self.screen.screen)
@@ -143,34 +150,48 @@ class LevelEditor:
         for block in self.blocks:
             if block.rect.collidepoint(x, y):
                 self.blocks.remove(block)
+                logging.info(f"Removed block at ({x}, {y})")
                 break
         if self.player_start and self.player_start.rect.collidepoint(x, y):
             self.history.append(('player', self.player_start))
             self.player_start = None
+            logging.info("Removed player start position")
         if self.key_start and self.key_start.rect.collidepoint(x, y):
             self.history.append(('key', self.key_start))
             self.key_start = None
+            logging.info("Removed key start position")
         if self.door_start and self.door_start.rect.collidepoint(x, y):
             self.history.append(('door', self.door_start))
             self.door_start = None
+            logging.info("Removed door start position")
 
     def run(self):
+        logging.info("Starting LevelEditor run loop")
         running = True
+        redraw_needed = True  # Flag to track if redraw is needed
+
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    logging.info("Received QUIT event")
                     running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
+                    logging.info(f"Mouse button down at position: {event.pos}")
                     if self.return_button_rect.collidepoint(event.pos):
+                        logging.info("Return button clicked")
                         running = False
                     elif self.dropdown_rect.collidepoint(event.pos):
                         self.dropdown_open = not self.dropdown_open
+                        logging.info(f"Dropdown menu {'opened' if self.dropdown_open else 'closed'}")
+                        redraw_needed = True
                     elif self.dropdown_open:
                         for i, rect in enumerate(self.dropdown_items):
                             if rect.collidepoint(event.pos):
                                 self.selected_level_index = i
                                 self.load_level(i)
                                 self.dropdown_open = False
+                                logging.info(f"Selected level {i}")
+                                redraw_needed = True
                                 break
                     else:
                         x, y = event.pos
@@ -180,27 +201,39 @@ class LevelEditor:
                             for block in self.blocks:
                                 if block.rect.collidepoint(x, y):
                                     block.change_movability()
+                                    logging.info(f"Changed movability of block at ({x}, {y})")
                                     break
                             else:
                                 new_block = Block(x, y, self.block_size, self.block_size)
                                 self.blocks.append(new_block)
+                                logging.info(f"Placed new block at ({x}, {y})")
+                            redraw_needed = True
                         elif event.button == 3:  # Right click to remove object
                             self.remove_object(x, y)
+                            redraw_needed = True
                 elif event.type == pygame.KEYDOWN:
                     x, y = pygame.mouse.get_pos()
                     x = (x // self.block_size) * self.block_size
                     y = (y // self.block_size) * self.block_size
                     if event.key == pygame.K_1:  # Press '1' to place player
                         self.player_start = Player(x, y, self.block_size, self.block_size)
+                        logging.info(f"Placed player start at ({x}, {y})")
+                        redraw_needed = True
                     elif event.key == pygame.K_2:  # Press '2' to place key
                         self.key_start = Key(x, y, self.block_size, self.block_size)
+                        logging.info(f"Placed key start at ({x}, {y})")
+                        redraw_needed = True
                     elif event.key == pygame.K_3:  # Press '3' to place door
                         self.door_start = Door(x, y, self.block_size, self.block_size)
+                        logging.info(f"Placed door start at ({x}, {y})")
+                        redraw_needed = True
                     elif event.key == pygame.K_s:  # Press 's' to save the level
                         self.save_level()
                     elif event.key == pygame.K_z:  # Press 'z' to undo the last action
                         self.undo_last_action()
+                        redraw_needed = True
 
-            self.draw_elements()
-
+            if redraw_needed:
+                self.draw_elements()
+                redraw_needed = False
         self.screen.display_menu()

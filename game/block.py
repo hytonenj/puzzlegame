@@ -35,6 +35,12 @@ class Block:
         self.rect.y += dy
         self.record_movement((dx, dy))
 
+    def undo_movement(self):
+        if self.movements:
+            dx, dy = self.movements.pop()
+            self.rect.x -= dx
+            self.rect.y -= dy
+
     def shake(self, screen):
         original_position = self.rect.topleft
         shake_distance = 5

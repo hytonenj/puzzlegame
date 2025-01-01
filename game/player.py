@@ -14,47 +14,75 @@ class Player:
         new_x = self.rect.x + dx
         new_y = self.rect.y + dy
 
-        # Check boundaries against the grid
-        if (block_size <= new_x < (grid_size) * block_size and block_size <= new_y < (grid_size) * block_size) or (door and door.open == True and door.rect.collidepoint(new_x, new_y)):
-            # Check for collisions with blocks
-            if any(block.rect.collidepoint(new_x, new_y) for block in blocks):
-                return  # Prevent player from moving if there's a collision with a block
+        if not self._is_within_bounds(new_x, new_y, grid_size, block_size, door):
+            return
 
-            if key:
-                key_new_x = key.rect.x + dx
-                key_new_y = key.rect.y + dy
+        if self._handle_block_collisions(new_x, new_y, dx, dy, grid_size, block_size, key, door, blocks):
+            return
 
-                # Check if the player is adjacent to the key and moving towards it
-                if self.rect.colliderect(key.rect.move(-dx, -dy)):
-                    # Check boundaries for the key or if it can move to the door's position
-                    if (block_size <= key_new_x < (grid_size) * block_size and block_size <= key_new_y < (grid_size) * block_size) or (door and key.rect.collidepoint(door.rect.x, door.rect.y)):
-                        # Check for collisions with blocks for the key
-                        if any(block.rect.collidepoint(key_new_x, key_new_y) for block in blocks):
-                            return  # Prevent key from moving if there's a collision with a block
-                        key.move(dx, dy)
-                    elif door and (key_new_x == door.rect.x and key_new_y == door.rect.y):
-                        key.move(dx, dy)
+        if self._handle_key_movement(dx, dy, block_size, grid_size, key, door, blocks):
+            return
+
+        if self._handle_door_movement(dx, dy, block_size, grid_size, door, blocks):
+            return
+
+        self.rect.x = new_x
+        self.rect.y = new_y
+        self.record_movement((dx, dy))
+
+    def _is_within_bounds(self, x, y, grid_size, block_size, door):
+        return (block_size <= x < grid_size * block_size and block_size <= y < grid_size * block_size) or (door and door.open and door.rect.collidepoint(x, y))
+
+    def _handle_block_collisions(self, new_x, new_y, dx, dy, grid_size, block_size, key, door, blocks):
+        for block in blocks:
+            if block.rect.collidepoint(new_x, new_y):
+                if block.can_move:
+                    block_new_x = block.rect.x + dx
+                    block_new_y = block.rect.y + dy
+                    if self._is_within_bounds(block_new_x, block_new_y, grid_size, block_size, door) and \
+                       not self._collides_with_any(block_new_x, block_new_y, key, door, blocks, exclude=block):
+                        block.move(dx, dy)
                     else:
-                        return  # Prevent player from moving if the key can't move
-                    
-            if door and not door.open:
-                door_new_x = door.rect.x + dx
-                door_new_y = door.rect.y + dy
+                        return True
+                else:
+                    return True
+        return False
 
-                # Check if the player is adjacent to the door and moving towards it
-                if self.rect.colliderect(door.rect.move(-dx, -dy)):
-                    # Check boundaries for the door
-                    if block_size <= door_new_x < (grid_size) * block_size and block_size <= door_new_y < (grid_size) * block_size:
-                        # Check for collisions with blocks for the door
-                        if any(block.rect.collidepoint(door_new_x, door_new_y) for block in blocks):
-                            return  # Prevent door from moving if there's a collision with a block
-                        door.move(dx, dy)
-                    else:
-                        return  # Prevent player from moving if the door can't move
+    def _handle_key_movement(self, dx, dy, block_size, grid_size, key, door, blocks):
+        if key:
+            key_new_x = key.rect.x + dx
+            key_new_y = key.rect.y + dy
+            if self.rect.colliderect(key.rect.move(-dx, -dy)):
+                if self._is_within_bounds(key_new_x, key_new_y, grid_size, block_size, door) and \
+                   not self._collides_with_any(key_new_x, key_new_y, None, None, blocks):
+                    key.move(dx, dy)
+                elif door and key_new_x == door.rect.x and key_new_y == door.rect.y:
+                    key.move(dx, dy)
+                else:
+                    return True
+        return False
 
-            self.rect.x = new_x
-            self.rect.y = new_y
-            self.record_movement((dx, dy))
+    def _handle_door_movement(self, dx, dy, block_size, grid_size, door, blocks):
+        if door and not door.open:
+            door_new_x = door.rect.x + dx
+            door_new_y = door.rect.y + dy
+            if self.rect.colliderect(door.rect.move(-dx, -dy)):
+                if self._is_within_bounds(door_new_x, door_new_y, grid_size, block_size, door) and \
+                   not self._collides_with_any(door_new_x, door_new_y, None, None, blocks):
+                    door.move(dx, dy)
+                else:
+                    return True
+        return False
+
+    def _collides_with_any(self, x, y, key, door, blocks, exclude=None):
+        if key and key.rect.collidepoint(x, y):
+            return True
+        if door and door.rect.collidepoint(x, y):
+            return True
+        for block in blocks:
+            if block != exclude and block.rect.collidepoint(x, y):
+                return True
+        return False
 
     def record_movement(self, direction):
         self.movements.append(direction)
