@@ -116,7 +116,7 @@ class Game:
             not any(new_player_pos == new_block_pos for new_block_pos in new_block_positions.values())
         )
         key_not_colliding = (
-            new_key_pos != new_door_pos and
+            # new_key_pos != new_door_pos and
             not any(new_key_pos == new_block_pos for new_block_pos in new_block_positions.values())
         )
         door_not_colliding = (
