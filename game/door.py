@@ -1,4 +1,5 @@
 import pygame
+import asyncio
 
 class Door:
     def __init__(self, x, y, width, height, image_path="assets/door_closed.png"):
@@ -31,18 +32,18 @@ class Door:
             self.rect.x -= dx
             self.rect.y -= dy
 
-    def shake(self, screen):
+    async def shake(self, screen):
         original_position = self.rect.topleft
         shake_distance = 5
         for _ in range(5):
             self.rect.x += shake_distance
             self.draw(screen)
             pygame.display.update()
-            pygame.time.wait(10)
+            await asyncio.sleep(0.01)
             self.rect.x -= shake_distance
             self.draw(screen)
             pygame.display.update()
-            pygame.time.wait(10)
+            await asyncio.sleep(0.01)
         self.rect.topleft = original_position
         self.draw(screen)
         pygame.display.update()

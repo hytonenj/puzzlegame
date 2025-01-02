@@ -83,13 +83,15 @@ class Game:
     def get_state(self):
         return self.state
     
-    def shake_if_colliding(self, obj1_pos, obj2_pos, obj1, obj2, obj1_name, obj2_name):
+    async def shake_if_colliding(self, obj1_pos, obj2_pos, obj1, obj2, obj1_name, obj2_name):
         if obj1_pos == obj2_pos:
             logging.warning(f"{obj1_name} and {obj2_name} are about to collide")
-            obj1.shake(self.screen.screen)
-            obj2.shake(self.screen.screen)
+            await asyncio.gather(
+                obj1.shake(self.screen.screen),
+                obj2.shake(self.screen.screen)
+            )
     
-    def undo_last_action(self):
+    async def undo_last_action(self):
         logging.info("Undoing last action")
         new_player_pos = (self.player.rect.x, self.player.rect.y)
         new_key_pos = (self.key.rect.x, self.key.rect.y)
@@ -134,30 +136,14 @@ class Game:
                 block.undo_movement()
             self.total_undos += 1
         else:
-            self.shake_if_colliding(new_player_pos, new_key_pos, self.player, self.key, "Player", "Key")
-            self.shake_if_colliding(new_player_pos, new_door_pos, self.player, self.door, "Player", "Door")
-            self.shake_if_colliding(new_key_pos, new_door_pos, self.key, self.door, "Key", "Door")
-            if new_player_pos == new_key_pos == new_door_pos:
-                logging.warning("Player, key, and door are about to collide")
-                self.player.shake(self.screen.screen)
-                self.key.shake(self.screen.screen)
-                self.door.shake(self.screen.screen)
+            await self.shake_if_colliding(new_player_pos, new_key_pos, self.player, self.key, "Player", "Key")
+            await self.shake_if_colliding(new_player_pos, new_door_pos, self.player, self.door, "Player", "Door")
             for block, new_block_pos in new_block_positions.items():
-                self.shake_if_colliding(new_block_pos, new_player_pos, block, self.player, "Block", "Player")
-                self.shake_if_colliding(new_block_pos, new_key_pos, block, self.key, "Block", "Key")
-                self.shake_if_colliding(new_block_pos, new_door_pos, block, self.door, "Block", "Door")
-                if new_block_pos == new_player_pos == new_key_pos:
-                    logging.warning("Block, player, and key are about to collide")
-                    block.shake(self.screen.screen)
-                    self.player.shake(self.screen.screen)
-                    self.key.shake(self.screen.screen)
-                if new_block_pos == new_player_pos == new_door_pos:
-                    logging.warning("Block, player, and door are about to collide")
-                    block.shake(self.screen.screen)
-                    self.player.shake(self.screen.screen)
-                    self.door.shake(self.screen.screen)
+                await self.shake_if_colliding(new_block_pos, new_player_pos, block, self.player, "Block", "Player")
+                await self.shake_if_colliding(new_block_pos, new_key_pos, block, self.key, "Block", "Key")
+                await self.shake_if_colliding(new_block_pos, new_door_pos, block, self.door, "Block", "Door")
     
-    def handle_events(self):
+    async def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 logging.info("Received QUIT event")
@@ -179,7 +165,7 @@ class Game:
                     self.total_moves += 1
                 elif event.key == pygame.K_z:
                     logging.info("Undoing last move")
-                    self.undo_last_action()
+                    await self.undo_last_action()
                 elif event.key == pygame.K_r:
                     self.reset_level()
                 elif event.key == pygame.K_ESCAPE:
@@ -246,7 +232,7 @@ class Game:
                     await asyncio.sleep(0)
 
             while self.get_state() == "in_progress":
-                self.handle_events()
+                await self.handle_events()
                 self.screen.update_screen(self.player, self.key, self.door, self.blocks, self.current_level_index + 1, len(self.levels))
                 if not self.running:
                     logging.info("Exiting game from in progress")
