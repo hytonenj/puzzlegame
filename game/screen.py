@@ -42,9 +42,9 @@ class Screen:
         for block in blocks:
             block.draw(self.screen)
 
-    def draw_level_text(self, level):
+    def draw_level_text(self, level, max_level):
         level_font = pygame.font.SysFont("monospace", 25)
-        level_text = level_font.render(f"Level {level}", True, Color.GREEN)
+        level_text = level_font.render(f"Level {level}/{max_level}", True, Color.GREEN)
         text_rect = level_text.get_rect(center=(self.width // 2, 35))
         self.screen.blit(level_text, text_rect)
 
@@ -59,13 +59,13 @@ class Screen:
             instruction_text = self.font.render(instruction, True, Color.WHITE)
             self.screen.blit(instruction_text, (10, 2 + i * 20))
 
-    def update_screen(self, player, key, door, blocks, level):
+    def update_screen(self, player, key, door, blocks, level, max_level):
         self.refresh_background()
         self.draw_player(player)
         self.draw_key(key)
         self.draw_door(door)
         self.draw_blocks(blocks)
-        self.draw_level_text(level)
+        self.draw_level_text(level, max_level)
         self.draw_instructions()
         pygame.display.update()
 
