@@ -1,8 +1,10 @@
 # Puzzle Game
 
-Welcome to the Puzzle Game! This is a fun and challenging game where you need to move the key to open a door to next level. 
+Welcome to the Puzzle Game! This is a fun and challenging game where you need to move the key to open a door to next level. Hint: The undo button (z) is a game mechanic.
 
+Try the game here: [Puzzle Game on GitHub Pages](https://hytonenj.github.io/puzzlegame/)
 ## How to Play
+
 
 - Use the `W`, `A`, `S`, `D` keys to move the player up, left, down, and right respectively.
 - Use the `Z` key to undo the last movement.
