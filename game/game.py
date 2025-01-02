@@ -1,6 +1,7 @@
 import pygame
 import time
 import logging
+import asyncio
 from game.key import Key
 from game.door import Door
 from game.block import Block
@@ -23,6 +24,7 @@ class Game:
         self.total_undos = 0
         self.total_resets = 0
         self.start_time = None
+        self.running = True
         self.load_level(self.current_level_index)
 
     def load_level(self, level_index):
@@ -159,7 +161,8 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 logging.info("Received QUIT event")
-                self.end_game()
+                self.running = False
+                return
             elif event.type == pygame.KEYDOWN:
                 logging.info(f"Key pressed: {pygame.key.name(event.key)}")
                 if event.key == pygame.K_w:
@@ -200,11 +203,11 @@ class Game:
                     logging.info("No more levels to load")
                     self.win_game()
 
-    def handle_menu_events(self, start_rect, edit_rect, quit_rect):
+    def handle_menu_events(self, start_rect, edit_rect):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 logging.info("Received QUIT event in menu")
-                self.end_game()
+                self.running = False
                 return False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 logging.info(f"Mouse button down at position: {event.pos}")
@@ -212,17 +215,13 @@ class Game:
                     logging.info("Start button clicked")
                     self.start_game()
                     return True
-                elif edit_rect.collidepoint(event.pos):
+                elif edit_rect and edit_rect.collidepoint(event.pos):
                     logging.info("Edit button clicked")
                     editor = LevelEditor(self.screen)
                     editor.run()
                     self.levels = create_levels()
-                elif quit_rect.collidepoint(event.pos):
-                    logging.info("Quit button clicked")
-                    self.end_game()
-                    return False
         return True
-    
+        
     def handle_winning_screen_events(self, return_rect):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -236,28 +235,34 @@ class Game:
                     return True
         return False
 
-    def run(self):
-        while True:
+    async def run(self):
+        while self.running:
             while self.get_state() == "not_started":
-                start_rect, edit_rect, quit_rect = self.screen.display_menu()
+                start_rect, edit_rect = self.screen.display_menu()
                 while self.get_state() == "not_started":
-                    if not self.handle_menu_events(start_rect, edit_rect, quit_rect):
+                    if not self.handle_menu_events(start_rect, edit_rect):
                         logging.info("Exiting game from menu")
-                        pygame.quit()
-                        return
-                
+                        return  # Exit the run function
+                    await asyncio.sleep(0)
+
             while self.get_state() == "in_progress":
                 self.handle_events()
                 self.screen.update_screen(self.player, self.key, self.door, self.blocks, self.current_level_index + 1)
-            
+                await asyncio.sleep(0)
+
             if self.get_state() == "ended":
                 logging.info("Game ended, resetting game")
                 self.reset_game()
                 self.state = "not_started"
-            
+
             if self.get_state() == "won":
                 return_rect = self.screen.display_winning_screen(self.total_moves, self.total_undos, self.total_resets, self.elapsed_time)
                 while not self.handle_winning_screen_events(return_rect):
-                    pygame.time.wait(100)  # Wait for 100 milliseconds before checking again
+                    for event in pygame.event.get():
+                        if event.type == pygame.QUIT:
+                            logging.info("Received QUIT event on winning screen")
+                            self.running = False
+                            return  # Exit the run function
+                    await asyncio.sleep(0)
                 self.reset_game()
                 self.state = "not_started"

@@ -1,5 +1,6 @@
 import pygame
 import logging
+import sys
 from game.color import Color
 
 # Configure logging
@@ -72,21 +73,22 @@ class Screen:
         logging.info("Displaying menu")
         menu_font = pygame.font.SysFont("monospace", 50)
         start_text = menu_font.render("Start", True, Color.WHITE)
-        edit_text = menu_font.render("Editor", True, Color.WHITE)
-        quit_text = menu_font.render("Quit", True, Color.WHITE)
-
-        start_rect = start_text.get_rect(center=(self.width // 2, self.height // 2 - 100))
-        edit_rect = edit_text.get_rect(center=(self.width // 2, self.height // 2))
-        quit_rect = quit_text.get_rect(center=(self.width // 2, self.height // 2 + 100))
+        start_rect = start_text.get_rect(center=(self.width // 2, self.height // 2 - 50))
 
         self.screen.fill(Color.BLACK)
         self.screen.blit(start_text, start_rect)
-        self.screen.blit(edit_text, edit_rect)
-        self.screen.blit(quit_text, quit_rect)
-        pygame.display.update()
 
-        logging.debug("Menu displayed with Start, Edit, and Quit options")
-        return start_rect, edit_rect, quit_rect
+        if sys.platform != "emscripten":
+            edit_text = menu_font.render("Editor", True, Color.WHITE)
+            edit_rect = edit_text.get_rect(center=(self.width // 2, self.height // 2 + 50))
+            self.screen.blit(edit_text, edit_rect)
+            pygame.display.update()
+            logging.debug("Menu displayed with Start and Edit options")
+            return start_rect, edit_rect
+        else:
+            pygame.display.update()
+            logging.debug("Menu displayed with Start option only")
+            return start_rect, None
     
     def display_winning_screen(self, total_moves, total_undos, total_resets, elapsed_time):
         logging.info("Displaying winning screen")

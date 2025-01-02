@@ -1,8 +1,9 @@
-import pygame
+import asyncio
 from game.game import Game
 
-if __name__ == "__main__":
-    pygame.init()
+def main():
     game = Game()
-    game.run()
-    pygame.quit()
+    asyncio.run(game.run())
+
+if __name__ == "__main__":
+    main()
