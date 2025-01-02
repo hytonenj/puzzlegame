@@ -248,6 +248,9 @@ class Game:
             while self.get_state() == "in_progress":
                 self.handle_events()
                 self.screen.update_screen(self.player, self.key, self.door, self.blocks, self.current_level_index + 1, len(self.levels))
+                if not self.running:
+                    logging.info("Exiting game from in progress")
+                    return
                 await asyncio.sleep(0)
 
             if self.get_state() == "ended":
