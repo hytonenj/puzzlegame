@@ -82,13 +82,21 @@ class Screen:
             edit_text = menu_font.render("Editor", True, Color.WHITE)
             edit_rect = edit_text.get_rect(center=(self.width // 2, self.height // 2 + 50))
             self.screen.blit(edit_text, edit_rect)
-            pygame.display.update()
-            logging.debug("Menu displayed with Start and Edit options")
-            return start_rect, edit_rect
         else:
-            pygame.display.update()
-            logging.debug("Menu displayed with Start option only")
-            return start_rect, None
+            edit_rect = None
+
+        continue_rect = None
+        if sys.platform == "emscripten":
+            from js import window
+            saved_level = window.localStorage.getItem("current_level_index")
+            if saved_level is not None:
+                continue_text = menu_font.render("Continue", True, Color.WHITE)
+                continue_rect = continue_text.get_rect(center=(self.width // 2, self.height // 2 + 50))
+                self.screen.blit(continue_text, continue_rect)
+
+        pygame.display.update()
+        logging.debug("Menu displayed with Start, Continue (if available), and Edit options")
+        return start_rect, edit_rect, continue_rect
     
     def display_winning_screen(self, total_moves, total_undos, total_resets, elapsed_time):
         logging.info("Displaying winning screen")

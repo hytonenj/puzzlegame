@@ -2,9 +2,9 @@ import pygame
 import time
 import logging
 import asyncio
+import sys
 from game.key import Key
 from game.door import Door
-from game.block import Block
 from game.player import Player
 from game.screen import Screen
 from game.levels import create_levels
@@ -25,7 +25,6 @@ class Game:
         self.total_resets = 0
         self.start_time = None
         self.running = True
-        self.load_level(self.current_level_index)
 
     def load_level(self, level_index):
         logging.info(f"Loading level {level_index + 1}")
@@ -39,6 +38,32 @@ class Game:
         self.initial_key_pos = level.key_start
         self.initial_door_pos = level.door_start
         self.initial_block_positions = {block: (block.rect.x, block.rect.y) for block in level.blocks}
+        self.save_current_level()
+    
+    def save_current_level(self):
+        if sys.platform == "emscripten":
+            logging.info(f"Saving current level: {self.current_level_index}")
+            from js import window
+            window.localStorage.setItem("current_level_index", str(self.current_level_index))
+            window.localStorage.setItem("total_moves", str(self.total_moves))
+            window.localStorage.setItem("total_undos", str(self.total_undos))
+            window.localStorage.setItem("total_resets", str(self.total_resets))
+            window.localStorage.setItem("start_time", str(self.start_time))
+            logging.info("Current level and game state saved")
+        else:
+            logging.warning("Saving levels is only supported in the browser")
+
+    def load_saved_level(self):
+        if sys.platform == "emscripten":
+            from js import window
+            saved_level = window.localStorage.getItem("current_level_index")
+            if saved_level is not None:
+                self.current_level_index = int(saved_level)
+                self.total_moves = int(window.localStorage.getItem("total_moves"))
+                self.total_undos = int(window.localStorage.getItem("total_undos"))
+                self.total_resets = int(window.localStorage.getItem("total_resets"))
+                self.start_time = float(window.localStorage.getItem("start_time"))
+                self.load_level(self.current_level_index)
 
     def reset_level(self):
         logging.info("Resetting level")
@@ -70,6 +95,11 @@ class Game:
         self.load_level(self.current_level_index)
         self.start_time = time.time()
 
+    def continue_game(self):
+        logging.info("Continuing game")
+        self.state = "in_progress"
+        self.load_saved_level()
+
     def end_game(self):
         logging.info("Ending game")
         self.current_level_index = 0
@@ -79,6 +109,10 @@ class Game:
         logging.info("Winning game")
         self.state = "won"
         self.elapsed_time = time.time() - self.start_time
+        # Remove the saved level from browser storage
+        if sys.platform == "emscripten":
+            from js import window
+            window.localStorage.removeItem("current_level_index")
 
     def get_state(self):
         return self.state
@@ -154,21 +188,28 @@ class Game:
                 if event.key == pygame.K_w:
                     self.player.move(0, -self.screen.block_size, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
                     self.total_moves += 1
+                    self.save_current_level()
                 elif event.key == pygame.K_s:
                     self.player.move(0, self.screen.block_size, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
                     self.total_moves += 1
+                    self.save_current_level()
                 elif event.key == pygame.K_a:
                     self.player.move(-self.screen.block_size, 0, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
                     self.total_moves += 1
+                    self.save_current_level()
                 elif event.key == pygame.K_d:
                     self.player.move(self.screen.block_size, 0, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
                     self.total_moves += 1
+                    self.save_current_level()
                 elif event.key == pygame.K_z:
                     logging.info("Undoing last move")
                     await self.undo_last_action()
+                    self.save_current_level()
                 elif event.key == pygame.K_r:
                     self.reset_level()
+                    self.save_current_level()
                 elif event.key == pygame.K_ESCAPE:
+                    self.save_current_level()
                     self.reset_game()
                     self.state = "not_started"
 
@@ -189,7 +230,7 @@ class Game:
                     logging.info("No more levels to load")
                     self.win_game()
 
-    def handle_menu_events(self, start_rect, edit_rect):
+    def handle_menu_events(self, start_rect, edit_rect, continue_rect):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 logging.info("Received QUIT event in menu")
@@ -206,6 +247,10 @@ class Game:
                     editor = LevelEditor(self.screen)
                     editor.run()
                     self.levels = create_levels()
+                elif continue_rect and continue_rect.collidepoint(event.pos):
+                    logging.info("Continue button clicked")
+                    self.continue_game()
+                    return True
         return True
         
     def handle_winning_screen_events(self, return_rect):
@@ -224,9 +269,9 @@ class Game:
     async def run(self):
         while self.running:
             while self.get_state() == "not_started":
-                start_rect, edit_rect = self.screen.display_menu()
+                start_rect, edit_rect, continue_rect = self.screen.display_menu()
                 while self.get_state() == "not_started":
-                    if not self.handle_menu_events(start_rect, edit_rect):
+                    if not self.handle_menu_events(start_rect, edit_rect, continue_rect):
                         logging.info("Exiting game from menu")
                         return  # Exit the run function
                     await asyncio.sleep(0)
