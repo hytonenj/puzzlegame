@@ -25,10 +25,29 @@ class Game:
         self.total_resets = 0
         self.start_time = None
         self.running = True
+        self.challenge = False
+        self.levels_path = "../data/levels.json"
+        self.challenges_path = "../data/challenges.json"
+    
+    def start_challenge(self, level_index):
+        logging.info(f"Starting challenge {level_index + 1}")
+        self.levels = create_levels(self.challenges_path)
+        self.current_level_index = level_index
+        self.state = "in_progress"
+        level = self.levels[level_index]
+        self.player = Player(level.player_start[0], level.player_start[1], self.screen.block_size, self.screen.block_size)
+        self.key = Key(level.key_start[0], level.key_start[1], self.screen.block_size, self.screen.block_size)
+        self.door = Door(level.door_start[0], level.door_start[1], self.screen.block_size, self.screen.block_size)
+        self.blocks = level.blocks
+        self.initial_player_pos = level.player_start
+        self.initial_key_pos = level.key_start
+        self.initial_door_pos = level.door_start
+        self.initial_block_positions = {block: (block.rect.x, block.rect.y) for block in level.blocks}
+        self.start_time = time.time()
 
     def load_level(self, level_index):
         logging.info(f"Loading level {level_index + 1}")
-        self.levels = create_levels()
+        self.levels = create_levels(self.levels_path)
         level = self.levels[level_index]
         self.player = Player(level.player_start[0], level.player_start[1], self.screen.block_size, self.screen.block_size)
         self.key = Key(level.key_start[0], level.key_start[1], self.screen.block_size, self.screen.block_size)
@@ -83,6 +102,7 @@ class Game:
 
     def reset_game(self):
         logging.info("Resetting game")
+        self.challenge = False
         self.reset_level()
         self.total_moves = 0
         self.total_undos = 0
@@ -223,14 +243,18 @@ class Game:
             if self.player.rect.colliderect(self.door.rect):
                 logging.info("Player and door collided")
                 self.current_level_index += 1
-                if self.current_level_index < len(self.levels):
+                if self.challenge:
+                    logging.info("Challenge completed")
+                    self.state = "challenge_menu"
+                    self.win_game()
+                elif self.current_level_index < len(self.levels):
                     logging.info(f"Loading next level: {self.current_level_index}")
                     self.load_level(self.current_level_index)
                 else:
                     logging.info("No more levels to load")
                     self.win_game()
 
-    def handle_menu_events(self, start_rect, edit_rect, continue_rect):
+    def handle_menu_events(self, start_rect, edit_rect, continue_rect, challenge_rect):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 logging.info("Received QUIT event in menu")
@@ -242,15 +266,58 @@ class Game:
                     logging.info("Start button clicked")
                     self.start_game()
                     return True
+                elif challenge_rect and challenge_rect.collidepoint(event.pos):
+                    logging.info("Challenges button clicked")
+                    self.state = "challenge_menu"
+                    return True
                 elif edit_rect and edit_rect.collidepoint(event.pos):
                     logging.info("Edit button clicked")
                     editor = LevelEditor(self.screen)
                     editor.run()
-                    self.levels = create_levels()
+                    self.levels = create_levels(self.levels_path)
                 elif continue_rect and continue_rect.collidepoint(event.pos):
                     logging.info("Continue button clicked")
                     self.continue_game()
                     return True
+        return True
+    
+    async def handle_challenge_events(self):
+        current_index = 0
+        self.levels = create_levels(self.challenges_path)
+        left_rect, middle_rect, right_rect = self.screen.display_challenge_menu(current_index)
+
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    logging.info("Received QUIT event in challenges")
+                    self.running = False
+                    return False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        logging.info("Return button clicked")
+                        self.state = "not_started"
+                        return False
+                    elif event.key == pygame.K_RIGHT:
+                        current_index = (current_index + 1) % len(self.levels)
+                    elif event.key == pygame.K_LEFT:
+                        current_index = (current_index - 1) % len(self.levels)
+                    left_rect, middle_rect, right_rect = self.screen.display_challenge_menu(current_index)
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    logging.info(f"Mouse button down at position: {event.pos}")
+                    if left_rect.collidepoint(event.pos):
+                        current_index = (current_index - 1) % len(self.levels)
+                        left_rect, middle_rect, right_rect = self.screen.display_challenge_menu(current_index)
+                    elif right_rect.collidepoint(event.pos):
+                        current_index = (current_index + 1) % len(self.levels)
+                        left_rect, middle_rect, right_rect = self.screen.display_challenge_menu(current_index)
+                    elif middle_rect.collidepoint(event.pos):
+                        logging.info(f"Challenge {current_index} selected")
+                        self.state = "in_progress"
+                        self.challenge = True
+                        self.start_challenge(current_index)
+                        return True
+            await asyncio.sleep(0)
         return True
         
     def handle_winning_screen_events(self, return_rect):
@@ -269,9 +336,9 @@ class Game:
     async def run(self):
         while self.running:
             while self.get_state() == "not_started":
-                start_rect, edit_rect, continue_rect = self.screen.display_menu()
+                start_rect, edit_rect, continue_rect, challenge_rect = self.screen.display_menu()
                 while self.get_state() == "not_started":
-                    if not self.handle_menu_events(start_rect, edit_rect, continue_rect):
+                    if not self.handle_menu_events(start_rect, edit_rect, continue_rect, challenge_rect):
                         logging.info("Exiting game from menu")
                         return  # Exit the run function
                     await asyncio.sleep(0)
@@ -300,3 +367,6 @@ class Game:
                     await asyncio.sleep(0)
                 self.reset_game()
                 self.state = "not_started"
+
+            if self.get_state() == "challenge_menu":
+                await self.handle_challenge_events()

@@ -69,18 +69,40 @@ class Screen:
         self.draw_instructions()
         pygame.display.update()
 
+    def display_challenge_menu(self, current_index):
+        menu_font = pygame.font.SysFont("monospace", 40)
+        arrow_font = pygame.font.SysFont("monospace", 60)
+        self.screen.fill(Color.BLACK)
+        left_arrow = arrow_font.render("<", True, Color.WHITE)
+        right_arrow = arrow_font.render(">", True, Color.WHITE)
+        challenge_name = menu_font.render(f"Challenge {current_index}", True, Color.WHITE)
+
+        left_rect = left_arrow.get_rect(center=(self.width // 4, self.height // 2))
+        middle_rect = challenge_name.get_rect(center=(self.width // 2, self.height // 2))
+        right_rect = right_arrow.get_rect(center=(3 * self.width // 4, self.height // 2))
+
+        self.screen.blit(left_arrow, left_rect)
+        self.screen.blit(challenge_name, middle_rect)
+        self.screen.blit(right_arrow, right_rect)
+        pygame.display.update()
+        return left_rect, middle_rect, right_rect
+
     def display_menu(self):
         logging.info("Displaying menu")
         menu_font = pygame.font.SysFont("monospace", 50)
         start_text = menu_font.render("Start", True, Color.WHITE)
-        start_rect = start_text.get_rect(center=(self.width // 2, self.height // 2 - 50))
+        start_rect = start_text.get_rect(center=(self.width // 2, self.height // 2 - 100))
+        challenge_text = menu_font.render("Challenges", True, Color.WHITE)
+        challenge_rect = challenge_text.get_rect(center=(self.width // 2, self.height // 2))
+
 
         self.screen.fill(Color.BLACK)
         self.screen.blit(start_text, start_rect)
+        self.screen.blit(challenge_text, challenge_rect)
 
         if sys.platform != "emscripten":
             edit_text = menu_font.render("Editor", True, Color.WHITE)
-            edit_rect = edit_text.get_rect(center=(self.width // 2, self.height // 2 + 50))
+            edit_rect = edit_text.get_rect(center=(self.width // 2, self.height // 2 + 100))
             self.screen.blit(edit_text, edit_rect)
         else:
             edit_rect = None
@@ -91,12 +113,12 @@ class Screen:
             saved_level = window.localStorage.getItem("current_level_index")
             if saved_level is not None:
                 continue_text = menu_font.render("Continue", True, Color.WHITE)
-                continue_rect = continue_text.get_rect(center=(self.width // 2, self.height // 2 + 50))
+                continue_rect = continue_text.get_rect(center=(self.width // 2, self.height // 2 + 100))
                 self.screen.blit(continue_text, continue_rect)
 
         pygame.display.update()
         logging.debug("Menu displayed with Start, Continue (if available), and Edit options")
-        return start_rect, edit_rect, continue_rect
+        return start_rect, edit_rect, continue_rect, challenge_rect
     
     def display_winning_screen(self, total_moves, total_undos, total_resets, elapsed_time):
         logging.info("Displaying winning screen")

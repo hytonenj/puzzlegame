@@ -17,5 +17,5 @@ def load_levels_from_json(file_path):
 
     return levels
 
-def create_levels():
-    return load_levels_from_json(os.path.join(os.path.dirname(__file__), '../data/levels.json'))
+def create_levels(path):
+    return load_levels_from_json(os.path.join(os.path.dirname(__file__), path))
