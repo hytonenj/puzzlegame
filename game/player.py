@@ -2,7 +2,7 @@ import pygame
 import asyncio
 
 class Player:
-    def __init__(self, x, y, width, height, image_path="assets/player.png"):
+    def __init__(self, x, y, width, height, image_path="assets/pixel_player.png"):
         self.movements = []
         self.rect = pygame.Rect(x, y, width, height)
         self.image = pygame.image.load(image_path)

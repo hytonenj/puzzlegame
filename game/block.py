@@ -2,7 +2,7 @@ import pygame
 import asyncio
 
 class Block:
-    def __init__(self, x, y, width, height, can_move=False, image_path="assets/block.png", image_path_moveable="assets/block_moveable.png"):
+    def __init__(self, x, y, width, height, can_move=False, image_path="assets/pixel_block.png", image_path_moveable="assets/pixel_block_moveable.png"):
         self.movements = []
         self.rect = pygame.Rect(x, y, width, height)
         self.can_move = can_move

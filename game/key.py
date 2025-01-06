@@ -2,7 +2,7 @@ import pygame
 import asyncio
 
 class Key:
-    def __init__(self, x, y, width, height, image_path="assets/key.png"):
+    def __init__(self, x, y, width, height, image_path="assets/pixel_key.png"):
         self.movements = []
         self.rect = pygame.Rect(x, y, width, height)
         self.image = pygame.image.load(image_path)

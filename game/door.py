@@ -2,7 +2,7 @@ import pygame
 import asyncio
 
 class Door:
-    def __init__(self, x, y, width, height, image_path="assets/door_closed.png"):
+    def __init__(self, x, y, width, height, image_path="assets/pixel_door_closed.png"):
         self.movements = []
         self.rect = pygame.Rect(x, y, width, height)
         self.image = pygame.image.load(image_path)
@@ -50,8 +50,8 @@ class Door:
 
     def change_image(self):
         if self.open:
-            self.image = pygame.image.load("assets/door_open.png")
+            self.image = pygame.image.load("assets/pixel_door_open.png")
             self.image = pygame.transform.scale(self.image, (self.rect.width, self.rect.height))
         else:
-            self.image = pygame.image.load("assets/door_closed.png")
+            self.image = pygame.image.load("assets/pixel_door_closed.png")
             self.image = pygame.transform.scale(self.image, (self.rect.width, self.rect.height))
