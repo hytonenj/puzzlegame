@@ -47,8 +47,8 @@ class LevelEditor:
 
         # Dropdown menu for selecting level
         self.dropdown_open = False
-        self.dropdown_rect = pygame.Rect(self.screen.width - 210, 25, 200, 40)
-        self.dropdown_items = [pygame.Rect(self.screen.width - 210, 60 + i * 40, 200, 40) for i in range(len(self.levels))]
+        self.dropdown_rect = pygame.Rect(self.screen.width - 220, 0, 200, 80)
+        self.dropdown_items = [pygame.Rect(self.screen.width - 220, 80 + i * 40, 200, 40) for i in range(len(self.levels))]
         self.selected_level_index = level_index
 
         # Load existing level if level_index is provided
@@ -131,18 +131,22 @@ class LevelEditor:
 
     def draw_dropdown_menu(self):
         font = pygame.font.SysFont("monospace", 18)
-        if self.dropdown_open:
-            pygame.draw.rect(self.screen.screen, Color.DARK_GRAY, self.dropdown_rect)
+        pygame.draw.rect(self.screen.screen, Color.DARK_GRAY, self.dropdown_rect)
+        
+        if self.selected_level_index is not None:
+            dropdown_text = font.render(f"Level {self.selected_level_index + 1}", True, Color.WHITE)
+        else:
             dropdown_text = font.render("Select Level", True, Color.WHITE)
-            self.screen.screen.blit(dropdown_text, self.dropdown_rect.topleft)
+        
+        text_rect = dropdown_text.get_rect(center=self.dropdown_rect.center)
+        self.screen.screen.blit(dropdown_text, text_rect.topleft)
+        
+        if self.dropdown_open:
             for i, rect in enumerate(self.dropdown_items):
-                pygame.draw.rect(self.screen.screen, Color.DARK_GRAY, rect)
+                color = Color.GREEN if i == self.selected_level_index else Color.DARK_GRAY
+                pygame.draw.rect(self.screen.screen, color, rect)
                 item_text = font.render(f"Level {i + 1}", True, Color.WHITE)
                 self.screen.screen.blit(item_text, rect.topleft)
-        else:
-            pygame.draw.rect(self.screen.screen, Color.DARK_GRAY, self.dropdown_rect)
-            dropdown_text = font.render("Select Level", True, Color.WHITE)
-            self.screen.screen.blit(dropdown_text, self.dropdown_rect.topleft)
 
     def draw_elements(self):
         logging.debug("Drawing elements on screen")
