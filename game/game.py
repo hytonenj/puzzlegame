@@ -212,12 +212,13 @@ class Game:
                 block_dx, block_dy = block.undo_movement()
                 block_movements.append((block, block_dx, block_dy))
             # Check for teleport collisions after undoing movements
-            objects = self.blocks + [self.key, self.door]
-            self._check_teleport_collision(self.teleports, player_dx, player_dy, objects, self.player, self.screen.grid_size, self.screen.block_size)
-            self._check_teleport_collision(self.teleports, key_dx, key_dy, self.blocks, self.key, self.screen.grid_size, self.screen.block_size)
-            self._check_teleport_collision(self.teleports, door_dx, door_dy, self.blocks, self.door, self.screen.grid_size, self.screen.block_size)
+            all_objects = self.blocks + [self.key, self.door, self.player]
+            no_key_door_objects = self.blocks + [self.player]
+            self._check_teleport_collision(self.teleports, player_dx, player_dy, all_objects, self.player, self.screen.grid_size, self.screen.block_size)
+            self._check_teleport_collision(self.teleports, key_dx, key_dy, no_key_door_objects, self.key, self.screen.grid_size, self.screen.block_size)
+            self._check_teleport_collision(self.teleports, door_dx, door_dy, no_key_door_objects, self.door, self.screen.grid_size, self.screen.block_size)
             for block, block_dx, block_dy in block_movements:
-                self._check_teleport_collision(self.teleports, block_dx, block_dy, objects, block, self.screen.grid_size, self.screen.block_size)
+                self._check_teleport_collision(self.teleports, block_dx, block_dy, all_objects, block, self.screen.grid_size, self.screen.block_size)
         else:
             await self.shake_if_colliding(new_player_pos, new_key_pos, self.player, self.key, "Player", "Key")
             await self.shake_if_colliding(new_player_pos, new_door_pos, self.player, self.door, "Player", "Door")
