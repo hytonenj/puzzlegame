@@ -7,14 +7,14 @@ from game.color import Color
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class Screen:
-    def __init__(self, width=800, height=800, background_color=Color.BLACK, font_type="monospace", font_size=15):
+    def __init__(self, width=880, height=880, background_color=Color.BLACK, font_type="monospace", font_size=15):
         logging.info("Initializing screen")
         self.width = width
         self.height = height
         self.background_color = background_color
         self.screen = pygame.display.set_mode((width, height))
         self.font = pygame.font.SysFont(font_type, font_size)
-        self.grid_size = 9
+        self.grid_size = 10
         self.block_size = min(width, height) // (self.grid_size + 1)
         pygame.display.set_caption("Puzzle Game")
 
