@@ -27,6 +27,9 @@ class Block:
         else:
             self.can_move = True
             self.load_image()
+    
+    def is_moveable(self):
+        return self.can_move
 
     def record_movement(self, direction):
         self.movements.append(direction)
@@ -41,6 +44,9 @@ class Block:
             dx, dy = self.movements.pop()
             self.rect.x -= dx
             self.rect.y -= dy
+            return -dx, -dy
+        else:
+            return 0, 0
 
     async def shake(self, screen):
         original_position = self.rect.topleft

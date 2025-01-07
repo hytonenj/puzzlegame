@@ -9,6 +9,12 @@ class Door:
         self.image = pygame.transform.scale(self.image, (width, height))
         self.open = False
 
+    def is_open(self):
+        return self.open
+    
+    def is_moveable(self):
+        return True
+
     def draw(self, screen):
         screen.blit(self.image, self.rect.topleft)
 
@@ -31,6 +37,9 @@ class Door:
             dx, dy = self.movements.pop()
             self.rect.x -= dx
             self.rect.y -= dy
+            return -dx, -dy
+        else:
+            return 0, 0
 
     async def shake(self, screen):
         original_position = self.rect.topleft

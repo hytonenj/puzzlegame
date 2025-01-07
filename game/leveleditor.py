@@ -7,6 +7,7 @@ from game.player import Player
 from game.key import Key
 from game.door import Door
 from game.color import Color
+from game.teleport import Teleport, TeleportPair
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -30,6 +31,7 @@ class LevelEditor:
         self.player_start = None
         self.key_start = None
         self.door_start = None
+        self.teleports = []
 
         # Levels path
         self.levels_path = os.path.join(os.path.dirname(__file__), '../data/levels.json')
@@ -63,6 +65,7 @@ class LevelEditor:
             self.key_start = Key(level_data["key_start"][0], level_data["key_start"][1], self.block_size, self.block_size)
             self.door_start = Door(level_data["door_start"][0], level_data["door_start"][1], self.block_size, self.block_size)
             self.blocks = [Block(*block) for block in level_data["blocks"]]
+            self.teleports = [TeleportPair(teleport[0][0], teleport[0][1], teleport[1][0], teleport[1][1], self.block_size, self.block_size) for teleport in level_data.get("teleports", [])]
         except IndexError:
             logging.error("Level not found")
 
@@ -95,7 +98,9 @@ class LevelEditor:
             "player_start": [self.player_start.rect.x, self.player_start.rect.y],
             "key_start": [self.key_start.rect.x, self.key_start.rect.y],
             "door_start": [self.door_start.rect.x, self.door_start.rect.y],
-            "blocks": [[block.rect.x, block.rect.y, block.rect.width, block.rect.height, block.can_move] for block in self.blocks]
+            "blocks": [[block.rect.x, block.rect.y, block.rect.width, block.rect.height, block.can_move] for block in self.blocks],
+            "teleports": [[[teleport.teleport1.rect.x, teleport.teleport1.rect.y, teleport.teleport1.rect.width, teleport.teleport1.rect.height],
+                        [teleport.teleport2.rect.x, teleport.teleport2.rect.y, teleport.teleport2.rect.width, teleport.teleport2.rect.height]] for teleport in self.teleports]
         }
 
         if self.selected_level_index is not None:
@@ -117,17 +122,16 @@ class LevelEditor:
 
     def draw_instructions(self):
         instructions = [
-            "LMB: Place Block/Change Movability",
+            "LMB: Place Block/Change Movability/Place Teleport",
             "RMB: Remove Object",
-            "1: Place Player",
-            "2: Place Key",
-            "3: Place Door",
+            "1, 2, 3: Place Player, Key, Door",
+            "T: Toggle Teleport Placement",
             "S: Save Level"
         ]
         font = pygame.font.SysFont("monospace", 14)
         for i, instruction in enumerate(instructions):
             instruction_text = font.render(instruction, True, Color.WHITE)
-            self.screen.screen.blit(instruction_text, (10, 1 + i * 13))
+            self.screen.screen.blit(instruction_text, (10, 3 + i * 15))
 
     def draw_dropdown_menu(self):
         font = pygame.font.SysFont("monospace", 18)
@@ -148,6 +152,10 @@ class LevelEditor:
                 item_text = font.render(f"Level {i + 1}", True, Color.WHITE)
                 self.screen.screen.blit(item_text, rect.topleft)
 
+    def add_teleport_pair(self, x1, y1, x2, y2):
+        teleport_pair = TeleportPair(x1, y1, x2, y2, self.block_size, self.block_size)
+        self.teleports.append(teleport_pair)
+
     def draw_elements(self):
         logging.debug("Drawing elements on screen")
         self.screen.refresh_background()
@@ -159,7 +167,9 @@ class LevelEditor:
             self.key_start.draw(self.screen.screen)
         if self.door_start:
             self.door_start.draw(self.screen.screen)
-        self.screen.screen.blit(self.return_button_text, self.return_button_rect)
+        if self.teleports:
+            for teleport in self.teleports:
+                teleport.draw(self.screen.screen)
         self.draw_dropdown_menu()
         self.draw_instructions()
         pygame.display.flip()
@@ -182,11 +192,20 @@ class LevelEditor:
             self.history.append(('door', self.door_start))
             self.door_start = None
             logging.info("Removed door start position")
+        if self.teleports:
+            for teleport in self.teleports:
+                if teleport.teleport1.rect.collidepoint(x, y) or teleport.teleport2.rect.collidepoint(x, y):
+                    self.history.append(('teleport', teleport))
+                    self.teleports.remove(teleport)
+                    logging.info("Removed teleport pair")
+                    return
 
     def run(self):
         logging.info("Starting LevelEditor run loop")
         running = True
         redraw_needed = True  # Flag to track if redraw is needed
+        placing_teleport = False
+        teleport_start_pos = None
 
         while running:
             for event in pygame.event.get():
@@ -215,17 +234,28 @@ class LevelEditor:
                         x, y = event.pos
                         x = (x // self.block_size) * self.block_size
                         y = (y // self.block_size) * self.block_size
-                        if event.button == 1:  # Left click to place block
-                            for block in self.blocks:
-                                if block.rect.collidepoint(x, y):
-                                    block.change_movability()
-                                    logging.info(f"Changed movability of block at ({x}, {y})")
-                                    break
+                        if event.button == 1:  # Left click to place block or teleport
+                            if placing_teleport:
+                                if teleport_start_pos is None:
+                                    teleport_start_pos = (x, y)
+                                    logging.info(f"Teleport start position set at ({x}, {y})")
+                                else:
+                                    self.add_teleport_pair(teleport_start_pos[0], teleport_start_pos[1], x, y)
+                                    logging.info(f"Placed teleport pair from ({teleport_start_pos[0]}, {teleport_start_pos[1]}) to ({x}, {y})")
+                                    teleport_start_pos = None
+                                    placing_teleport = False
+                                redraw_needed = True
                             else:
-                                new_block = Block(x, y, self.block_size, self.block_size)
-                                self.blocks.append(new_block)
-                                logging.info(f"Placed new block at ({x}, {y})")
-                            redraw_needed = True
+                                for block in self.blocks:
+                                    if block.rect.collidepoint(x, y):
+                                        block.change_movability()
+                                        logging.info(f"Changed movability of block at ({x}, {y})")
+                                        break
+                                else:
+                                    new_block = Block(x, y, self.block_size, self.block_size)
+                                    self.blocks.append(new_block)
+                                    logging.info(f"Placed new block at ({x}, {y})")
+                                redraw_needed = True
                         elif event.button == 3:  # Right click to remove object
                             self.remove_object(x, y)
                             redraw_needed = True
@@ -245,6 +275,10 @@ class LevelEditor:
                         self.door_start = Door(x, y, self.block_size, self.block_size)
                         logging.info(f"Placed door start at ({x}, {y})")
                         redraw_needed = True
+                    elif event.key == pygame.K_t:  # Press 'T' to toggle teleport placement mode
+                        placing_teleport = not placing_teleport
+                        teleport_start_pos = None
+                        logging.info(f"Teleport placement mode {'enabled' if placing_teleport else 'disabled'}")
                     elif event.key == pygame.K_s:  # Press 's' to save the level
                         self.save_level()
                     elif event.key == pygame.K_z:  # Press 'z' to undo the last action

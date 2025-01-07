@@ -39,6 +39,7 @@ class Game:
         self.key = Key(level.key_start[0], level.key_start[1], self.screen.block_size, self.screen.block_size)
         self.door = Door(level.door_start[0], level.door_start[1], self.screen.block_size, self.screen.block_size)
         self.blocks = level.blocks
+        self.teleports = level.teleports
         self.initial_player_pos = level.player_start
         self.initial_key_pos = level.key_start
         self.initial_door_pos = level.door_start
@@ -53,6 +54,7 @@ class Game:
         self.key = Key(level.key_start[0], level.key_start[1], self.screen.block_size, self.screen.block_size)
         self.door = Door(level.door_start[0], level.door_start[1], self.screen.block_size, self.screen.block_size)
         self.blocks = level.blocks
+        self.teleports = level.teleports
         self.initial_player_pos = level.player_start
         self.initial_key_pos = level.key_start
         self.initial_door_pos = level.door_start
@@ -97,7 +99,6 @@ class Game:
             block.movements = []
         self.door.open = False
         self.door.change_image()
-        self.total_resets += 1
         self.state = "in_progress"
 
     def reset_game(self):
@@ -164,31 +165,59 @@ class Game:
             if block.movements:
                 last_block_move = block.movements[-1]
                 new_block_positions[block] = (block.rect.x - last_block_move[0], block.rect.y - last_block_move[1])
-        self.total_undos += 1
+
+        player_within_bounds = self.is_within_bounds(new_player_pos[0], new_player_pos[1])
+        key_within_bounds = self.is_within_bounds(new_key_pos[0], new_key_pos[1])
+        door_within_bounds = self.is_within_bounds(new_door_pos[0], new_door_pos[1])
+        blocks_within_bounds = all(self.is_within_bounds(pos[0], pos[1]) for pos in new_block_positions.values())
+
+        def can_move_through_teleport(obj, new_pos):
+            for teleport_pair in self.teleports:
+                if teleport_pair.can_move_through_teleport(obj, new_pos, self.blocks + [self.key, self.door], self.screen.grid_size, self.screen.block_size):
+                    return True
+            return False
 
         player_not_colliding = (
-            new_player_pos != new_key_pos and
-            new_player_pos != new_door_pos and
-            not any(new_player_pos == new_block_pos for new_block_pos in new_block_positions.values())
+            can_move_through_teleport(self.player, new_player_pos) or 
+            (
+                new_player_pos != new_key_pos and
+                new_player_pos != new_door_pos and
+                not any(new_player_pos == new_block_pos for new_block_pos in new_block_positions.values())
+            )
         )
+
         key_not_colliding = (
-            # new_key_pos != new_door_pos and
+            can_move_through_teleport(self.key, new_key_pos) or
             not any(new_key_pos == new_block_pos for new_block_pos in new_block_positions.values())
         )
+
         door_not_colliding = (
+            can_move_through_teleport(self.door, new_door_pos) or
             not any(new_door_pos == new_block_pos for new_block_pos in new_block_positions.values())
         )
+
         blocks_not_colliding = (
+            all(can_move_through_teleport(block, new_block_pos) for block, new_block_pos in new_block_positions.items()) or
             not any(new_block_pos == other_block_pos for block, new_block_pos in new_block_positions.items() for other_block, other_block_pos in new_block_positions.items() if block != other_block)
         )
         logging.info(f"Player not colliding: {player_not_colliding}, Key not colliding: {key_not_colliding}, Door not colliding: {door_not_colliding}, Blocks not colliding: {blocks_not_colliding}")
-        if player_not_colliding and key_not_colliding and door_not_colliding and blocks_not_colliding:
-            self.player.undo_movement()
-            self.key.undo_movement()
-            self.door.undo_movement()
+        logging.info(f"Player within bounds: {player_within_bounds}, Key within bounds: {key_within_bounds}, Door within bounds: {door_within_bounds}, Blocks within bounds: {blocks_within_bounds}")
+        if (player_not_colliding and key_not_colliding and door_not_colliding and blocks_not_colliding
+            and player_within_bounds and key_within_bounds and door_within_bounds and blocks_within_bounds):
+            player_dx, player_dy = self.player.undo_movement()
+            key_dx, key_dy = self.key.undo_movement()
+            door_dx, door_dy = self.door.undo_movement()
+            block_movements = []
             for block in self.blocks:
-                block.undo_movement()
-            self.total_undos += 1
+                block_dx, block_dy = block.undo_movement()
+                block_movements.append((block, block_dx, block_dy))
+            # Check for teleport collisions after undoing movements
+            objects = self.blocks + [self.key, self.door]
+            self._check_teleport_collision(self.teleports, player_dx, player_dy, objects, self.player, self.screen.grid_size, self.screen.block_size)
+            self._check_teleport_collision(self.teleports, key_dx, key_dy, self.blocks, self.key, self.screen.grid_size, self.screen.block_size)
+            self._check_teleport_collision(self.teleports, door_dx, door_dy, self.blocks, self.door, self.screen.grid_size, self.screen.block_size)
+            for block, block_dx, block_dy in block_movements:
+                self._check_teleport_collision(self.teleports, block_dx, block_dy, objects, block, self.screen.grid_size, self.screen.block_size)
         else:
             await self.shake_if_colliding(new_player_pos, new_key_pos, self.player, self.key, "Player", "Key")
             await self.shake_if_colliding(new_player_pos, new_door_pos, self.player, self.door, "Player", "Door")
@@ -196,6 +225,23 @@ class Game:
                 await self.shake_if_colliding(new_block_pos, new_player_pos, block, self.player, "Block", "Player")
                 await self.shake_if_colliding(new_block_pos, new_key_pos, block, self.key, "Block", "Key")
                 await self.shake_if_colliding(new_block_pos, new_door_pos, block, self.door, "Block", "Door")
+            await self.shake_if_out_of_bounds(new_player_pos, self.player, "Player")
+            await self.shake_if_out_of_bounds(new_key_pos, self.key, "Key")
+            await self.shake_if_out_of_bounds(new_door_pos, self.door, "Door")
+            for block, new_block_pos in new_block_positions.items():
+                await self.shake_if_out_of_bounds(new_block_pos, block, "Block")
+
+    def is_within_bounds(self, x, y):
+        return self.screen.block_size <= x < self.screen.grid_size * self.screen.block_size and self.screen.block_size <= y < self.screen.grid_size * self.screen.block_size
+
+    async def shake_if_out_of_bounds(self, new_pos, obj, obj_name):
+        if not self.is_within_bounds(new_pos[0], new_pos[1]):
+            logging.warning(f"{obj_name} is out of bounds")
+            await obj.shake(self.screen.screen)
+
+    def _check_teleport_collision(self, teleports, dx, dy, objects, obj, grid_size, block_size):
+        for teleport_pair in teleports:
+            teleport_pair.check_and_teleport(obj, dx, dy, objects, grid_size, block_size)
     
     async def handle_events(self):
         for event in pygame.event.get():
@@ -206,27 +252,29 @@ class Game:
             elif event.type == pygame.KEYDOWN:
                 logging.info(f"Key pressed: {pygame.key.name(event.key)}")
                 if event.key == pygame.K_w:
-                    self.player.move(0, -self.screen.block_size, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
+                    self.player.move(0, -self.screen.block_size, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks, self.teleports)
                     self.total_moves += 1
                     self.save_current_level()
                 elif event.key == pygame.K_s:
-                    self.player.move(0, self.screen.block_size, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
+                    self.player.move(0, self.screen.block_size, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks, self.teleports)
                     self.total_moves += 1
                     self.save_current_level()
                 elif event.key == pygame.K_a:
-                    self.player.move(-self.screen.block_size, 0, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
+                    self.player.move(-self.screen.block_size, 0, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks, self.teleports)
                     self.total_moves += 1
                     self.save_current_level()
                 elif event.key == pygame.K_d:
-                    self.player.move(self.screen.block_size, 0, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks)
+                    self.player.move(self.screen.block_size, 0, self.screen.grid_size, self.screen.block_size, self.key, self.door, self.blocks, self.teleports)
                     self.total_moves += 1
                     self.save_current_level()
                 elif event.key == pygame.K_z:
                     logging.info("Undoing last move")
                     await self.undo_last_action()
+                    self.total_undos += 1
                     self.save_current_level()
                 elif event.key == pygame.K_r:
                     self.reset_level()
+                    self.total_resets += 1
                     self.save_current_level()
                 elif event.key == pygame.K_ESCAPE:
                     self.save_current_level()
@@ -240,7 +288,7 @@ class Game:
                 self.key.delete_key()
             
             # Player win condition
-            if self.player.rect.colliderect(self.door.rect):
+            if self.player.rect.colliderect(self.door.rect) and self.door.open:
                 logging.info("Player and door collided")
                 self.current_level_index += 1
                 if self.challenge:
@@ -345,7 +393,7 @@ class Game:
 
             while self.get_state() == "in_progress":
                 await self.handle_events()
-                self.screen.update_screen(self.player, self.key, self.door, self.blocks, self.current_level_index + 1, len(self.levels))
+                self.screen.update_screen(self.player, self.key, self.door, self.blocks, self.teleports, self.current_level_index + 1, len(self.levels))
                 if not self.running:
                     logging.info("Exiting game from in progress")
                     return

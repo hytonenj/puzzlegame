@@ -42,6 +42,10 @@ class Screen:
         for block in blocks:
             block.draw(self.screen)
 
+    def draw_teleports(self, teleports):
+        for teleport in teleports:
+            teleport.draw(self.screen)
+
     def draw_level_text(self, level, max_level):
         level_font = pygame.font.SysFont("monospace", 25)
         level_text = level_font.render(f"Level {level}/{max_level}", True, Color.GREEN)
@@ -59,8 +63,9 @@ class Screen:
             instruction_text = self.font.render(instruction, True, Color.WHITE)
             self.screen.blit(instruction_text, (10, 2 + i * 20))
 
-    def update_screen(self, player, key, door, blocks, level, max_level):
+    def update_screen(self, player, key, door, blocks, teleports, level, max_level):
         self.refresh_background()
+        self.draw_teleports(teleports)
         self.draw_player(player)
         self.draw_key(key)
         self.draw_door(door)

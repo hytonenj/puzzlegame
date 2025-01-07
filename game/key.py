@@ -14,6 +14,9 @@ class Key:
     def record_movement(self, direction):
         self.movements.append(direction)
 
+    def is_moveable(self):
+        return True
+
     def move(self, dx, dy):
         self.rect.x += dx
         self.rect.y += dy
@@ -24,6 +27,9 @@ class Key:
             dx, dy = self.movements.pop()
             self.rect.x -= dx
             self.rect.y -= dy
+            return -dx, -dy
+        else:
+            return 0, 0
     
     def delete_key(self):
         self.rect.x = -100
