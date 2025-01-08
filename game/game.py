@@ -369,18 +369,19 @@ class Game:
             await asyncio.sleep(0)
         return True
         
-    def handle_winning_screen_events(self, return_rect):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                logging.info("Received QUIT event on winning screen")
-                self.end_game()
-                return False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                logging.info(f"Mouse button down at position: {event.pos}")
-                if return_rect.collidepoint(event.pos):
-                    logging.info("Return button clicked on winning screen")
-                    return True
-        return False
+    async def handle_winning_screen_events(self, return_rect):
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    logging.info("Received QUIT event on winning screen")
+                    self.end_game()
+                    return False
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Check for left mouse button
+                    logging.info(f"Left mouse button down at position: {event.pos}")
+                    if return_rect.collidepoint(event.pos):
+                        logging.info("Return button clicked on winning screen")
+                        return True
+            await asyncio.sleep(0)
 
     async def run(self):
         while self.running:
@@ -407,15 +408,11 @@ class Game:
 
             if self.get_state() == "won":
                 return_rect = self.screen.display_winning_screen(self.total_moves, self.total_undos, self.total_resets, self.elapsed_time)
-                while not self.handle_winning_screen_events(return_rect):
-                    for event in pygame.event.get():
-                        if event.type == pygame.QUIT:
-                            logging.info("Received QUIT event on winning screen")
-                            self.running = False
-                            return  # Exit the run function
-                    await asyncio.sleep(0)
-                self.reset_game()
-                self.state = "not_started"
+                while self.running:
+                    if await self.handle_winning_screen_events(return_rect):
+                        self.reset_game()
+                        self.state = "not_started"
+                        break
 
             if self.get_state() == "challenge_menu":
                 await self.handle_challenge_events()
