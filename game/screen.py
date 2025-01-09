@@ -77,18 +77,24 @@ class Screen:
     def display_challenge_menu(self, current_index):
         menu_font = pygame.font.SysFont("monospace", 40)
         arrow_font = pygame.font.SysFont("monospace", 60)
+        header_font = pygame.font.SysFont("monospace", 35)
         self.screen.fill(Color.BLACK)
+
         left_arrow = arrow_font.render("<", True, Color.WHITE)
         right_arrow = arrow_font.render(">", True, Color.WHITE)
-        challenge_name = menu_font.render(f"Challenge {current_index}", True, Color.WHITE)
+        challenge_name = menu_font.render(f"Level {current_index + 1}", True, Color.WHITE)
+        header_text = header_font.render("Replay individual levels", True, Color.WHITE)
 
         left_rect = left_arrow.get_rect(center=(self.width // 4, self.height // 2))
         middle_rect = challenge_name.get_rect(center=(self.width // 2, self.height // 2))
         right_rect = right_arrow.get_rect(center=(3 * self.width // 4, self.height // 2))
+        header_rect = header_text.get_rect(center=(self.width // 2, self.height // 3))
 
         self.screen.blit(left_arrow, left_rect)
         self.screen.blit(challenge_name, middle_rect)
         self.screen.blit(right_arrow, right_rect)
+        self.screen.blit(header_text, header_rect)
+
         pygame.display.update()
         return left_rect, middle_rect, right_rect
 
@@ -97,7 +103,7 @@ class Screen:
         menu_font = pygame.font.SysFont("monospace", 50)
         start_text = menu_font.render("Start", True, Color.WHITE)
         start_rect = start_text.get_rect(center=(self.width // 2, self.height // 2 - 100))
-        challenge_text = menu_font.render("Challenges", True, Color.WHITE)
+        challenge_text = menu_font.render("Levels", True, Color.WHITE)
         challenge_rect = challenge_text.get_rect(center=(self.width // 2, self.height // 2))
 
 

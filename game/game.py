@@ -27,24 +27,6 @@ class Game:
         self.running = True
         self.challenge = False
         self.levels_path = "../data/levels.json"
-        self.challenges_path = "../data/challenges.json"
-    
-    def start_challenge(self, level_index):
-        logging.info(f"Starting challenge {level_index + 1}")
-        self.levels = create_levels(self.challenges_path)
-        self.current_level_index = level_index
-        self.state = "in_progress"
-        level = self.levels[level_index]
-        self.player = Player(level.player_start[0], level.player_start[1], self.screen.block_size, self.screen.block_size)
-        self.key = Key(level.key_start[0], level.key_start[1], self.screen.block_size, self.screen.block_size)
-        self.door = Door(level.door_start[0], level.door_start[1], self.screen.block_size, self.screen.block_size)
-        self.blocks = level.blocks
-        self.teleports = level.teleports
-        self.initial_player_pos = level.player_start
-        self.initial_key_pos = level.key_start
-        self.initial_door_pos = level.door_start
-        self.initial_block_positions = {block: (block.rect.x, block.rect.y) for block in level.blocks}
-        self.start_time = time.time()
 
     def load_level(self, level_index):
         logging.info(f"Loading level {level_index + 1}")
@@ -62,6 +44,8 @@ class Game:
         self.save_current_level()
     
     def save_current_level(self):
+        if self.challenge:
+            return
         if sys.platform == "emscripten":
             logging.info(f"Saving current level: {self.current_level_index}")
             from js import window
@@ -69,10 +53,11 @@ class Game:
             window.localStorage.setItem("total_moves", str(self.total_moves))
             window.localStorage.setItem("total_undos", str(self.total_undos))
             window.localStorage.setItem("total_resets", str(self.total_resets))
-            window.localStorage.setItem("start_time", str(self.start_time))
+            self.elapsed_time = time.time() - self.start_time
+            window.localStorage.setItem("elapsed_time", str(self.elapsed_time))
             logging.info("Current level and game state saved")
         else:
-            logging.warning("Saving levels is only supported in the browser")
+            logging.info("Saving levels is only supported in the browser")
 
     def load_saved_level(self):
         if sys.platform == "emscripten":
@@ -83,7 +68,8 @@ class Game:
                 self.total_moves = int(window.localStorage.getItem("total_moves"))
                 self.total_undos = int(window.localStorage.getItem("total_undos"))
                 self.total_resets = int(window.localStorage.getItem("total_resets"))
-                self.start_time = float(window.localStorage.getItem("start_time"))
+                self.elapsed_time = float(window.localStorage.getItem("elapsed_time"))
+                self.start_time = time.time() - self.elapsed_time
                 self.load_level(self.current_level_index)
 
     def reset_level(self):
@@ -109,15 +95,16 @@ class Game:
         self.total_undos = 0
         self.total_resets = 0
 
-    def start_game(self):
+    def start_game(self, level_index):
         logging.info("Starting game")
-        self.state = "in_progress"
-        self.current_level_index = 0
-        self.load_level(self.current_level_index)
         self.start_time = time.time()
+        self.state = "in_progress"
+        self.current_level_index = level_index
+        self.load_level(self.current_level_index)
 
     def continue_game(self):
         logging.info("Continuing game")
+        self.start_time = time.time()
         self.state = "in_progress"
         self.load_saved_level()
 
@@ -131,7 +118,7 @@ class Game:
         self.state = "won"
         self.elapsed_time = time.time() - self.start_time
         # Remove the saved level from browser storage
-        if sys.platform == "emscripten":
+        if sys.platform == "emscripten" and not self.challenge:
             from js import window
             window.localStorage.removeItem("current_level_index")
 
@@ -200,8 +187,8 @@ class Game:
             all(can_move_through_teleport(block, new_block_pos) for block, new_block_pos in new_block_positions.items()) or
             not any(new_block_pos == other_block_pos for block, new_block_pos in new_block_positions.items() for other_block, other_block_pos in new_block_positions.items() if block != other_block)
         )
-        logging.info(f"Player not colliding: {player_not_colliding}, Key not colliding: {key_not_colliding}, Door not colliding: {door_not_colliding}, Blocks not colliding: {blocks_not_colliding}")
-        logging.info(f"Player within bounds: {player_within_bounds}, Key within bounds: {key_within_bounds}, Door within bounds: {door_within_bounds}, Blocks within bounds: {blocks_within_bounds}")
+        logging.debug(f"Player not colliding: {player_not_colliding}, Key not colliding: {key_not_colliding}, Door not colliding: {door_not_colliding}, Blocks not colliding: {blocks_not_colliding}")
+        logging.debug(f"Player within bounds: {player_within_bounds}, Key within bounds: {key_within_bounds}, Door within bounds: {door_within_bounds}, Blocks within bounds: {blocks_within_bounds}")
         if (player_not_colliding and key_not_colliding and door_not_colliding and blocks_not_colliding
             and player_within_bounds and key_within_bounds and door_within_bounds and blocks_within_bounds):
             player_dx, player_dy = self.player.undo_movement()
@@ -269,7 +256,6 @@ class Game:
                     self.total_moves += 1
                     self.save_current_level()
                 elif event.key == pygame.K_z:
-                    logging.info("Undoing last move")
                     await self.undo_last_action()
                     self.total_undos += 1
                     self.save_current_level()
@@ -293,11 +279,10 @@ class Game:
                 logging.info("Player and door collided")
                 self.current_level_index += 1
                 if self.challenge:
-                    logging.info("Challenge completed")
+                    logging.info("Level completed")
                     self.state = "challenge_menu"
                     self.win_game()
                 elif self.current_level_index < len(self.levels):
-                    logging.info(f"Loading next level: {self.current_level_index}")
                     self.load_level(self.current_level_index)
                 else:
                     logging.info("No more levels to load")
@@ -313,10 +298,10 @@ class Game:
                 logging.info(f"Mouse button down at position: {event.pos}")
                 if start_rect.collidepoint(event.pos):
                     logging.info("Start button clicked")
-                    self.start_game()
+                    self.start_game(level_index=0)
                     return True
                 elif challenge_rect and challenge_rect.collidepoint(event.pos):
-                    logging.info("Challenges button clicked")
+                    logging.info("Levels button clicked")
                     self.state = "challenge_menu"
                     return True
                 elif edit_rect and edit_rect.collidepoint(event.pos):
@@ -332,14 +317,14 @@ class Game:
     
     async def handle_challenge_events(self):
         current_index = 0
-        self.levels = create_levels(self.challenges_path)
+        self.levels = create_levels(self.levels_path)
         left_rect, middle_rect, right_rect = self.screen.display_challenge_menu(current_index)
 
         running = True
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    logging.info("Received QUIT event in challenges")
+                    logging.info("Received QUIT event in Levels")
                     self.running = False
                     return False
                 elif event.type == pygame.KEYDOWN:
@@ -361,10 +346,10 @@ class Game:
                         current_index = (current_index + 1) % len(self.levels)
                         left_rect, middle_rect, right_rect = self.screen.display_challenge_menu(current_index)
                     elif middle_rect.collidepoint(event.pos):
-                        logging.info(f"Challenge {current_index} selected")
+                        logging.info(f"Level {current_index} selected")
                         self.state = "in_progress"
                         self.challenge = True
-                        self.start_challenge(current_index)
+                        self.start_game(current_index)
                         return True
             await asyncio.sleep(0)
         return True
